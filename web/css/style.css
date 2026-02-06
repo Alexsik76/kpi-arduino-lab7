@@ -1,0 +1,59 @@
+/* Layout Centering */
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    margin: 0;
+}
+
+.monitor {
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
+}
+
+/* Video Stream Container */
+.stream-box {
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    border: 2px solid #333;
+}
+
+.stream-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Status Messages & Indicators */
+.offline-msg {
+    color: #d81b60;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.status-dot.on { 
+    background-color: #2ecc71; 
+    box-shadow: 0 0 8px #2ecc71; 
+}
+
+.status-dot.off { 
+    background-color: #e74c3c; 
+}
