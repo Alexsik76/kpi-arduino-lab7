@@ -1,4 +1,3 @@
-# core.py
 import cv2
 import threading
 import time
@@ -15,13 +14,13 @@ class TrackingSystem:
         self.lock = threading.Lock()
         self.current_frame = None
         
-        # Конфігурація кадру
+        # Frame configuration
         self.width = 640
         self.height = 480
         self.center_x = self.width // 2
         self.center_y = self.height // 2
 
-        # Ініціалізація компонентів
+        # Initialize subsystems
         self._init_hardware()
         self._init_ai()
         self._init_control()
@@ -32,21 +31,23 @@ class TrackingSystem:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         
-        # Початкові кути
+        # Initial servo position
         self.pan_angle = 90
         self.tilt_angle = 90
         self.pico.send_cmd(self.pan_angle, self.tilt_angle)
 
     def _init_ai(self):
+        # High threshold to avoid false positives
         self.detector = FaceDetector(score_threshold=0.7)
 
     def _init_control(self):
-        # НАЛАШТУВАННЯ PID (Найважливіше!)
-        # Kp=0.08: достатньо реакції
-        # Kd=0.04: гальмування, щоб не пролітати
+        # PID Configuration
+        # Kp=0.03: Soft response
+        # Kd=0.02: Dampening to prevent overshoot
         self.pid_pan = PIDController(kp=0.03, ki=0.0, kd=0.02, min_val=0, max_val=180)
         self.pid_tilt = PIDController(kp=0.03, ki=0.0, kd=0.02, min_val=45, max_val=135)
         
+        # Direction inversion (depends on hardware assembly)
         self.invert_pan = True
         self.invert_tilt = False
 
@@ -80,34 +81,34 @@ class TrackingSystem:
 
             if face_box is not None:
                 x, y, w, h = face_box
-                # Ніс - точка [4], [5]
+                # Nose tip coordinates are at index [4], [5]
                 nose_x, nose_y = landmarks[4], landmarks[5]
 
-                # Візуалізація
+                # Visualization
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
                 cv2.circle(frame, (nose_x, nose_y), 5, (0, 0, 255), -1)
 
                 # 2. Control Math (PID)
-                # Помилка = Ціль - Поточне
+                # Error = Target - Current
                 error_x = nose_x - self.center_x
                 error_y = nose_y - self.center_y
 
-                # Якщо в межах мертвої зони - скидаємо помилку в 0
+                # Dead zone check
                 if abs(error_x) < 30: error_x = 0
                 if abs(error_y) < 30: error_y = 0
 
                 if error_x != 0 or error_y != 0:
-                    delta_pan = self.pid_pan.compute(0, error_x) # current=0 (відносно центру)
+                    delta_pan = self.pid_pan.compute(0, error_x)
                     delta_tilt = self.pid_tilt.compute(0, error_y)
 
-                    # Інверсія та апдейт
+                    # Apply direction inversion
                     if self.invert_pan: delta_pan *= -1
                     if self.invert_tilt: delta_tilt *= -1
 
                     self.pan_angle += delta_pan
                     self.tilt_angle += delta_tilt
 
-                    # Hard Limits
+                    # Hard Limits for Servo
                     self.pan_angle = max(0, min(180, self.pan_angle))
                     self.tilt_angle = max(50, min(130, self.tilt_angle))
 

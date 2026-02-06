@@ -1,16 +1,16 @@
-# main.py
 import cv2
 import logging
 from flask import Flask, Response
 from core import TrackingSystem
 
-# Логування
+# Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 app = Flask(__name__)
 system = TrackingSystem()
 
 def generate_mjpeg():
+    """Generates MJPEG stream for the browser."""
     while True:
         frame = system.get_frame()
         if frame is None:
@@ -40,6 +40,7 @@ def video_feed():
 if __name__ == "__main__":
     try:
         system.start()
+        # Disable reloader to prevent double initialization of hardware
         app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
     finally:
         system.stop()
