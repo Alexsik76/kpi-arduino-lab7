@@ -1,33 +1,35 @@
 import cv2
-import numpy as np
+
+# import numpy as np
 import logging
 import os
 
 logger = logging.getLogger(__name__)
 
+
 class FaceDetector:
     def __init__(self, score_threshold=0.6):
         """
-        Ініціалізація детектора YuNet.
+        Initializes the YuNet detector.
         """
-        # 1. Оптимізація: Примусово використовуємо 4 потоки (ядра RPi 5)
+        # 1. Optimization: Force 4 threads (RPi 5 CPU cores)
         cv2.setNumThreads(4)
 
-        # 2. Визначаємо шлях до моделі
+        # 2. Determine model path
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, 'face_detection_yunet_2023mar.onnx')
+        model_path = os.path.join(current_dir, "face_detection_yunet_2023mar.onnx")
 
         if not os.path.exists(model_path):
             logger.error(f"Model not found at: {model_path}")
             raise FileNotFoundError(f"Missing model: {model_path}")
 
-        # 3. Розмір входу для НЕЙРОМЕРЕЖІ (для швидкості)
-        # YuNet тренована на 320x320. 
-        # Ми будемо стискати вхідний кадр до 320x240 (4:3), щоб було швидко.
+        # 3. Input size for NEURAL NETWORK (for speed)
+        # YuNet trained on 320x320.
+        # We will resize input frame to 320x240 (4:3) for speed.
         self.ai_width = 320
         self.ai_height = 240
 
-        # Ініціалізація YuNet
+        # Initialize YuNet
         self.detector = cv2.FaceDetectorYN.create(
             model=model_path,
             config="",
@@ -36,34 +38,36 @@ class FaceDetector:
             nms_threshold=0.3,
             top_k=5000,
             backend_id=cv2.dnn.DNN_BACKEND_OPENCV,
-            target_id=cv2.dnn.DNN_TARGET_CPU
+            target_id=cv2.dnn.DNN_TARGET_CPU,
         )
         logger.info(f"YuNet loaded. AI Resolution: {self.ai_width}x{self.ai_height}")
 
     def find_face(self, frame):
         """
-        Детектує обличчя на кадрі.
-        Повертає координати, масштабовані до оригінального розміру кадру.
+        Detects a face in the frame.
+        Returns coordinates scaled to original frame size.
         """
-        # Отримуємо розміри оригінального кадру (наприклад, 640x480)
+        # Get original frame dimensions (e.g., 640x480)
         orig_h, orig_w = frame.shape[:2]
 
-        # 1. Зменшуємо кадр для швидкості (Resize)
-        # Інтерполяція LINEAR найшвидша і достатня для детекції
-        input_frame = cv2.resize(frame, (self.ai_width, self.ai_height), interpolation=cv2.INTER_LINEAR)
+        # 1. Downscale frame for speed (Resize)
+        # LINEAR interpolation is fast enough for detection
+        input_frame = cv2.resize(
+            frame, (self.ai_width, self.ai_height), interpolation=cv2.INTER_LINEAR
+        )
 
-        # 2. Переконуємось, що детектор знає розмір входу
+        # 2. Ensure detector knows input size
         self.detector.setInputSize((self.ai_width, self.ai_height))
-        
-        # 3. Детекція
+
+        # 3. Detection
         _, faces = self.detector.detect(input_frame)
 
         if faces is None or len(faces) == 0:
             return None, None
 
-        # 4. Шукаємо найбільше обличчя
+        # 4. Find largest face
         best_face = None
-        best_landmarks = None
+        # best_landmarks = None
         max_area = 0
 
         for face in faces:
@@ -71,27 +75,27 @@ class FaceDetector:
             box = face[:4]
             w, h = box[2], box[3]
             area = w * h
-            
+
             if area > max_area:
                 max_area = area
                 best_face = face
 
         if best_face is not None:
-            # 5. Масштабування координат назад до оригінального розміру
-            # Обчислюємо коефіцієнти (наприклад, 640/320 = 2.0)
+            # 5. Scale coordinates back to original size
+            # Calculate coefficients (e.g., 640/320 = 2.0)
             scale_x = orig_w / self.ai_width
             scale_y = orig_h / self.ai_height
 
-            # Координати бокса (x, y, w, h)
+            # Box coordinates (x, y, w, h)
             box = best_face[:4]
             x = int(box[0] * scale_x)
             y = int(box[1] * scale_y)
             w = int(box[2] * scale_x)
             h = int(box[3] * scale_y)
 
-            # Координати точок (landmarks)
-            # best_face[4:14] - це 10 чисел (x,y для 5 точок)
-            # Ми множимо X на scale_x, Y на scale_y
+            # Landmark coordinates
+            # best_face[4:14] is 10 numbers (x,y for 5 points)
+            # Multiply X by scale_x, Y by scale_y
             landmarks = best_face[4:14].reshape(5, 2)
             landmarks[:, 0] *= scale_x
             landmarks[:, 1] *= scale_y
