@@ -33,6 +33,6 @@ class PIDController:
         self.last_time = now
         
         # Limit the output change (speed limit) to avoid jerky movements
-        output = max(-3, min(3, output))
+        output = max(-15, min(15, output))
         
         return output

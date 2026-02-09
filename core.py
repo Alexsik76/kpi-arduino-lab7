@@ -34,7 +34,7 @@ class TrackingSystem:
 
         # --- SAFETY: COMMAND RATE LIMITING ---
         self.last_command_time = 0
-        self.command_interval = 0.1  # Max 10 Hz for servos (100ms)
+        self.command_interval = 0.03  # Max 10 Hz for servos (100ms)
         self.last_sent_pan = -1
         self.last_sent_tilt = -1
 
@@ -43,7 +43,7 @@ class TrackingSystem:
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.pan_angle = 90
         self.tilt_angle = 90
         # Do not send command immediately at start to avoid current spike
@@ -53,8 +53,8 @@ class TrackingSystem:
         self.detector = FaceDetector(score_threshold=0.7)
 
     def _init_control(self):
-        self.pid_pan = PIDController(kp=0.03, ki=0.0, kd=0.02, min_val=0, max_val=180)
-        self.pid_tilt = PIDController(kp=0.03, ki=0.0, kd=0.02, min_val=45, max_val=135)
+        self.pid_pan = PIDController(kp=0.035, ki=0.0, kd=0.02, min_val=0, max_val=180)
+        self.pid_tilt = PIDController(kp=0.035, ki=0.0, kd=0.02, min_val=45, max_val=135)
         self.invert_pan = True
         self.invert_tilt = False
 
