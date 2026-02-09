@@ -1,48 +1,56 @@
-# app/hardware/servo_pico.py
 import serial
 import json
-import time
 import logging
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 class PicoController:
-    def __init__(self, port='/dev/ttyACM0', baudrate=115200):
+    def __init__(self, port='/dev/serial0', baudrate=115200):
         self.port = port
         self.baudrate = baudrate
-        self.serial = None
+        self.serial: Optional[serial.Serial] = None
         self._connect()
 
     def _connect(self):
         try:
-            self.serial = serial.Serial(self.port, self.baudrate, timeout=1)
-            time.sleep(2)  # Чекаємо на ресет Pico
-            logger.info(f"Connected to Pico on {self.port}")
+            self.serial = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                timeout=0.1,       # Short timeout for non-blocking feel
+                xonxoff=False,
+                rtscts=False,      # RPi 5 UART typically doesn't use hardware flow control
+                dsrdtr=False
+            )
+            logger.info(f"UART Connected: {self.port}")
         except serial.SerialException as e:
-            logger.error(f"Pico connection failed: {e}")
+            logger.critical(f"UART Connection failed: {e}")
             self.serial = None
 
-    def send_cmd(self, pan=None, tilt=None):
-        """Відправляє JSON команду на Pico"""
+    def send_cmd(self, pan: int, tilt: int):
+        """
+        Sends pan/tilt coordinates to Pico via UART.
+        Protocol: JSON string terminated by newline.
+        """
         if not self.serial:
-            # Спроба перепідключитись "на льоту"
-            self._connect()
-            if not self.serial: return
+            return
 
-        data = {}
-        if pan is not None: data['pan'] = int(pan)
-        if tilt is not None: data['tilt'] = int(tilt)
-
-        if not data: return
-
+        command = {"pan": int(pan), "tilt": int(tilt)}
+        
         try:
-            # Формуємо JSON + перехід рядка
-            json_cmd = json.dumps(data) + '\n'
-            self.serial.write(json_cmd.encode('utf-8'))
+            # Prepare payload: JSON + \n
+            payload = json.dumps(command) + "\n"
+            self.serial.write(payload.encode('utf-8'))
         except Exception as e:
-            logger.error(f"Error writing to Pico: {e}")
-            self.serial = None # Скидаємо, щоб перепідключитись
+            logger.error(f"UART Write Error: {e}")
+            # Optional: logic to attempt reconnection could go here
 
     def close(self):
-        if self.serial:
+        if self.serial and self.serial.is_open:
+            # Try to stop the robot before closing
+            try:
+                self.serial.write(b'{"stop":true}\n')
+            except Exception:
+                pass
             self.serial.close()
+            logger.info("UART closed")
