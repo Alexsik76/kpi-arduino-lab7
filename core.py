@@ -134,8 +134,15 @@ class TrackingSystem:
 
                 # PID calculation
                 if not self.manual_mode and (error_x != 0 or error_y != 0):
-                    delta_pan = self.pid_pan.compute(0, error_x)
-                    delta_tilt = self.pid_tilt.compute(0, error_y)
+                    if error_x != 0:
+                        delta_pan = self.pid_pan.compute(0, error_x)
+                    else:
+                        delta_pan = 0
+
+                    if error_y != 0:
+                        delta_tilt = self.pid_tilt.compute(0, error_y)
+                    else:
+                        delta_tilt = 0
 
                     if self.invert_pan:
                         delta_pan *= -1
