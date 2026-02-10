@@ -120,6 +120,7 @@ function processPlatform() {
             sendMove(lastLeft, lastRight); 
     }
 }
+}
 
 /**
  * Managed Sender
