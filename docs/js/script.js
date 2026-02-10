@@ -79,46 +79,33 @@ let lastRight = 0;
 
 function processPlatform() {
     let speed = 100;
-    let turnSpeed = 35; // Significantly reduced for finer control
-    let turnReduction = 0.5; // Slow down inner wheel for turns while moving
+    let turnSpeed = 35;
+    let turnReduction = 0.5;
 
     let left = 0;
     let right = 0;
 
     // Forward/Backward base
-    if (inputState.forward) {
-        left = speed;
-        right = speed;
-    } else if (inputState.backward) {
-        left = -speed;
-        right = -speed;
-    }
+    if (inputState.forward) { left = speed; right = speed; } 
+    else if (inputState.backward) { left = -speed; right = -speed; }
 
     // Turning mixing
     if (inputState.left) {
-        if (left === 0 && right === 0) {
-            // Spin in place (Left)
-            left = -turnSpeed;
-            right = turnSpeed;
-        } else {
-            // Turn while moving
-            left *= turnReduction; 
-        }
+        if (left === 0 && right === 0) { left = -turnSpeed; right = turnSpeed; } 
+        else { left *= turnReduction; }
     } else if (inputState.right) {
-        if (left === 0 && right === 0) {
-            // Spin in place (Right)
-            left = turnSpeed;
-            right = -turnSpeed;
-        } else {
-            // Turn while moving
-            right *= turnReduction;
-        }
+        if (left === 0 && right === 0) { left = turnSpeed; right = -turnSpeed; } 
+        else { right *= turnReduction; }
     }
 
-    // Only send if changed
-    if (Math.round(left) !== lastLeft || Math.round(right) !== lastRight) {
+    const now = Date.now();
+    const isChanged = (Math.round(left) !== lastLeft || Math.round(right) !== lastRight);
+    const isHeartbeatNeeded = (now - lastSentTime > 150);
+
+    if (isChanged || isHeartbeatNeeded) {
         lastLeft = Math.round(left);
         lastRight = Math.round(right);
+        lastSentTime = now;
         sendMove(lastLeft, lastRight);
     }
 }
