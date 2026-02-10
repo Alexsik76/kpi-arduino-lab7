@@ -76,6 +76,7 @@ setInterval(() => {
  */
 let lastLeft = 0;
 let lastRight = 0;
+let lastSentTime = 0;
 
 function processPlatform() {
     let speed = 100;
