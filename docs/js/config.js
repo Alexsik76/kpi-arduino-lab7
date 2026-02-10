@@ -3,7 +3,7 @@
 export const CONFIG = {
     hosts: {
         GLOBAL: 'https://robot.lab.vn.ua',
-        LOCAL: 'http://lb7w.lan:8000'
+        LOCAL: 'https://robo.lan'
     },
     endpoints: {
         health: '/health',
