@@ -79,7 +79,8 @@ let lastRight = 0;
 
 function processPlatform() {
     let speed = 100;
-    let turnReduction = 0.5; // Slow down inner wheel for turns
+    let turnSpeed = 35; // Significantly reduced for finer control
+    let turnReduction = 0.5; // Slow down inner wheel for turns while moving
 
     let left = 0;
     let right = 0;
@@ -96,18 +97,18 @@ function processPlatform() {
     // Turning mixing
     if (inputState.left) {
         if (left === 0 && right === 0) {
-            // Spin in place
-            left = -speed;
-            right = speed;
+            // Spin in place (Left)
+            left = -turnSpeed;
+            right = turnSpeed;
         } else {
             // Turn while moving
             left *= turnReduction; 
         }
     } else if (inputState.right) {
         if (left === 0 && right === 0) {
-            // Spin in place
-            left = speed;
-            right = -speed;
+            // Spin in place (Right)
+            left = turnSpeed;
+            right = -turnSpeed;
         } else {
             // Turn while moving
             right *= turnReduction;
