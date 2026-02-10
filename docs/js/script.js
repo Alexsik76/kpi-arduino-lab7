@@ -78,18 +78,56 @@ async function sendMove(left, right) {
 /**
  * Servo Control
  */
-async function moveServo(direction) {
-    if (!manualMode) return;
+/**
+ * Servo Control (Continuous)
+ */
+let servoInterval = null;
 
+function startServoMove(direction) {
+    if (!manualMode || servoInterval) return;
+    moveServoSingleStep(direction); // Move immediately
+    servoInterval = setInterval(() => moveServoSingleStep(direction), 20); // Then continuous
+}
+
+function stopServoMove() {
+    if (servoInterval) {
+        clearInterval(servoInterval);
+        servoInterval = null;
+    }
+}
+
+function moveServoSingleStep(direction) {
     const step = 1;
-    
+    let changed = false;
+
     switch(direction) {
-        case 'up': currentTilt = Math.max(50, currentTilt - step); break;
-        case 'down': currentTilt = Math.min(130, currentTilt + step); break;
-        case 'left': currentPan = Math.min(180, currentPan + step); break;
-        case 'right': currentPan = Math.max(0, currentPan - step); break;
+        case 'up': 
+            if (currentTilt > 50) { currentTilt -= step; changed = true; }
+            break;
+        case 'down': 
+            if (currentTilt < 130) { currentTilt += step; changed = true; }
+            break;
+        case 'left': 
+            if (currentPan < 180) { currentPan += step; changed = true; }
+            break;
+        case 'right': 
+            if (currentPan > 0) { currentPan -= step; changed = true; }
+            break;
     }
 
+    if (changed) {
+        sendServoCommand();
+    }
+}
+
+async function centerCamera() {
+    if (!manualMode) return;
+    currentPan = 90;
+    currentTilt = 90;
+    sendServoCommand();
+}
+
+async function sendServoCommand() {
     try {
         await fetch(`${CONFIG.host}${CONFIG.endpoints.servo}`, {
             method: 'POST',
@@ -100,6 +138,45 @@ async function moveServo(direction) {
         console.error("Servo failed:", e);
     }
 }
+
+/**
+ * Keyboard Controls
+ */
+document.addEventListener('keydown', (e) => {
+    if (!manualMode || e.repeat) return;
+    
+    switch(e.key) {
+        case 'w': case 'W': startMove('forward'); break;
+        case 's': case 'S': startMove('backward'); break;
+        case 'a': case 'A': startMove('left'); break;
+        case 'd': case 'D': startMove('right'); break;
+        
+        case 'ArrowUp': startServoMove('up'); e.preventDefault(); break;
+        case 'ArrowDown': startServoMove('down'); e.preventDefault(); break;
+        case 'ArrowLeft': startServoMove('left'); e.preventDefault(); break;
+        case 'ArrowRight': startServoMove('right'); e.preventDefault(); break;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (!manualMode) return;
+
+    switch(e.key) {
+        case 'w': case 'W': 
+        case 's': case 'S': 
+        case 'a': case 'A': 
+        case 'd': case 'D': 
+            stopMove(); 
+            break;
+        
+        case 'ArrowUp': 
+        case 'ArrowDown': 
+        case 'ArrowLeft': 
+        case 'ArrowRight': 
+            stopServoMove(); 
+            break;
+    }
+});
 
 /**
  * DOM Elements Cache
