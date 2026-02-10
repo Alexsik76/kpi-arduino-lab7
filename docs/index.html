@@ -42,43 +42,47 @@
         </div>
 
         <!-- Manual Controls UI -->
-        <div id="manual-controls" style="display: none; padding: 20px">
+        <div id="manual-controls" style="display: none; padding: 10px">
           <div class="grid">
             <!-- Platform Control (WASD) -->
             <div>
-              <h4>Platform</h4>
+              <h4>Platform <small>(WASD)</small></h4>
               <div class="control-grid">
                 <div></div>
                 <button
-                  onmousedown="startMove('forward')"
-                  onmouseup="stopMove()"
-                  ontouchstart="startMove('forward')"
-                  ontouchend="stopMove()"
+                  onmousedown="setInput('forward', true)"
+                  onmouseup="setInput('forward', false)"
+                  ontouchstart="setInput('forward', true)"
+                  ontouchend="setInput('forward', false)"
+                  title="Forward (W)"
                 >
                   ▲
                 </button>
                 <div></div>
                 <button
-                  onmousedown="startMove('left')"
-                  onmouseup="stopMove()"
-                  ontouchstart="startMove('left')"
-                  ontouchend="stopMove()"
+                  onmousedown="setInput('left', true)"
+                  onmouseup="setInput('left', false)"
+                  ontouchstart="setInput('left', true)"
+                  ontouchend="setInput('left', false)"
+                  title="Left (A)"
                 >
                   ◀
                 </button>
                 <button
-                  onmousedown="startMove('backward')"
-                  onmouseup="stopMove()"
-                  ontouchstart="startMove('backward')"
-                  ontouchend="stopMove()"
+                  onmousedown="setInput('backward', true)"
+                  onmouseup="setInput('backward', false)"
+                  ontouchstart="setInput('backward', true)"
+                  ontouchend="setInput('backward', false)"
+                  title="Backward (S)"
                 >
                   ▼
                 </button>
                 <button
-                  onmousedown="startMove('right')"
-                  onmouseup="stopMove()"
-                  ontouchstart="startMove('right')"
-                  ontouchend="stopMove()"
+                  onmousedown="setInput('right', true)"
+                  onmouseup="setInput('right', false)"
+                  ontouchstart="setInput('right', true)"
+                  ontouchend="setInput('right', false)"
+                  title="Right (D)"
                 >
                   ▶
                 </button>
@@ -87,17 +91,63 @@
 
             <!-- Servo Control -->
             <div>
-              <h4>Camera</h4>
+              <h4>Camera <small>(Arrows)</small></h4>
               <div class="control-grid">
                 <div></div>
-                <button onclick="moveServo('up')">▲</button>
+                <button
+                  onmousedown="setInput('camUp', true)"
+                  onmouseup="setInput('camUp', false)"
+                  ontouchstart="setInput('camUp', true)"
+                  ontouchend="setInput('camUp', false)"
+                  title="Up (ArrowUp)"
+                >
+                  ▲
+                </button>
                 <div></div>
-                <button onclick="moveServo('left')">◀</button>
-                <button onclick="moveServo('down')">▼</button>
-                <button onclick="moveServo('right')">▶</button>
+                <button
+                  onmousedown="setInput('camLeft', true)"
+                  onmouseup="setInput('camLeft', false)"
+                  ontouchstart="setInput('camLeft', true)"
+                  ontouchend="setInput('camLeft', false)"
+                  title="Left (ArrowLeft)"
+                >
+                  ◀
+                </button>
+                <button
+                  onmousedown="setInput('camDown', true)"
+                  onmouseup="setInput('camDown', false)"
+                  ontouchstart="setInput('camDown', true)"
+                  ontouchend="setInput('camDown', false)"
+                  title="Down (ArrowDown)"
+                >
+                  ▼
+                </button>
+                <button
+                  onmousedown="setInput('camRight', true)"
+                  onmouseup="setInput('camRight', false)"
+                  ontouchstart="setInput('camRight', true)"
+                  ontouchend="setInput('camRight', false)"
+                  title="Right (ArrowRight)"
+                >
+                  ▶
+                </button>
               </div>
+              <br />
+              <button class="outline" onclick="centerCamera()">
+                Center (90, 90)
+              </button>
             </div>
           </div>
+          <p
+            style="
+              text-align: center;
+              margin-top: 10px;
+              font-size: 0.8rem;
+              opacity: 0.7;
+            "
+          >
+            ⌨️ Use <b>WASD</b> to move robot, <b>Arrow Keys</b> to look around.
+          </p>
         </div>
 
         <footer>

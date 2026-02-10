@@ -27,7 +27,7 @@ body {
     justify-content: center;
     margin-bottom: 10px;
     border: 2px solid #333;
-    max-height: 60vh; /* Limit height so controls fit */
+    max-height: 50vh; /* Limit height so controls fit */
     margin-left: auto;
     margin-right: auto;
 }

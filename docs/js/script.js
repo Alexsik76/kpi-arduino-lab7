@@ -40,27 +40,86 @@ async function toggleManualMode() {
 }
 
 /**
- * Platform Movement Control
+ * Input State & Game Loop
  */
-async function startMove(direction) {
+const inputState = {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    camUp: false,
+    camDown: false,
+    camLeft: false,
+    camRight: false
+};
+
+// Helper to update state from HTML buttons
+function setInput(action, active) {
     if (!manualMode) return;
+    inputState[action] = active;
     
-    let left = 0, right = 0;
-    const speed = 100;
-
-    switch(direction) {
-        case 'forward': left = speed; right = speed; break;
-        case 'backward': left = -speed; right = -speed; break;
-        case 'left': left = -speed; right = speed; break;
-        case 'right': left = speed; right = -speed; break;
+    // Prevent mouse stickiness if dragging out of button
+    if (!active) {
+        // safety clear all if needed, but usually just the one is enough
     }
-
-    sendMove(left, right);
 }
 
-function stopMove() {
+// Main Control Loop (20Hz = 50ms)
+setInterval(() => {
     if (!manualMode) return;
-    sendMove(0, 0);
+    processPlatform();
+    processCamera();
+}, 50);
+
+/**
+ * Platform Logic
+ */
+let lastLeft = 0;
+let lastRight = 0;
+
+function processPlatform() {
+    let speed = 100;
+    let turnReduction = 0.5; // Slow down inner wheel for turns
+
+    let left = 0;
+    let right = 0;
+
+    // Forward/Backward base
+    if (inputState.forward) {
+        left = speed;
+        right = speed;
+    } else if (inputState.backward) {
+        left = -speed;
+        right = -speed;
+    }
+
+    // Turning mixing
+    if (inputState.left) {
+        if (left === 0 && right === 0) {
+            // Spin in place
+            left = -speed;
+            right = speed;
+        } else {
+            // Turn while moving
+            left *= turnReduction; 
+        }
+    } else if (inputState.right) {
+        if (left === 0 && right === 0) {
+            // Spin in place
+            left = speed;
+            right = -speed;
+        } else {
+            // Turn while moving
+            right *= turnReduction;
+        }
+    }
+
+    // Only send if changed
+    if (Math.round(left) !== lastLeft || Math.round(right) !== lastRight) {
+        lastLeft = Math.round(left);
+        lastRight = Math.round(right);
+        sendMove(lastLeft, lastRight);
+    }
 }
 
 async function sendMove(left, right) {
@@ -76,47 +135,35 @@ async function sendMove(left, right) {
 }
 
 /**
- * Servo Control
+ * Camera Logic
  */
-/**
- * Servo Control (Continuous)
- */
-let servoInterval = null;
+let lastPan = -1;
+let lastTilt = -1;
 
-function startServoMove(direction) {
-    if (!manualMode || servoInterval) return;
-    moveServoSingleStep(direction); // Move immediately
-    servoInterval = setInterval(() => moveServoSingleStep(direction), 20); // Then continuous
-}
-
-function stopServoMove() {
-    if (servoInterval) {
-        clearInterval(servoInterval);
-        servoInterval = null;
-    }
-}
-
-function moveServoSingleStep(direction) {
-    const step = 1;
+function processCamera() {
+    const step = 1; // 1 degree per tick (20 deg/sec)
     let changed = false;
 
-    switch(direction) {
-        case 'up': 
-            if (currentTilt > 50) { currentTilt -= step; changed = true; }
-            break;
-        case 'down': 
-            if (currentTilt < 130) { currentTilt += step; changed = true; }
-            break;
-        case 'left': 
-            if (currentPan < 180) { currentPan += step; changed = true; }
-            break;
-        case 'right': 
-            if (currentPan > 0) { currentPan -= step; changed = true; }
-            break;
+    if (inputState.camUp) {
+        if (currentTilt > 50) { currentTilt -= step; changed = true; }
+    }
+    if (inputState.camDown) {
+        if (currentTilt < 130) { currentTilt += step; changed = true; }
+    }
+    if (inputState.camLeft) {
+        if (currentPan < 180) { currentPan += step; changed = true; }
+    }
+    if (inputState.camRight) {
+        if (currentPan > 0) { currentPan -= step; changed = true; }
     }
 
-    if (changed) {
+    if (changed || (currentPan !== lastPan || currentTilt !== lastTilt)) {
+        // Rate limit sending commands is handled by backend somewhat, 
+        // but we can also optimize here to not flood network if backend is slow.
+        // For now, fire and forget.
         sendServoCommand();
+        lastPan = currentPan;
+        lastTilt = currentTilt;
     }
 }
 
@@ -124,6 +171,10 @@ async function centerCamera() {
     if (!manualMode) return;
     currentPan = 90;
     currentTilt = 90;
+    inputState.camUp = false;
+    inputState.camDown = false;
+    inputState.camLeft = false;
+    inputState.camRight = false;
     sendServoCommand();
 }
 
@@ -135,26 +186,26 @@ async function sendServoCommand() {
             body: JSON.stringify({ pan: currentPan, tilt: currentTilt })
         });
     } catch (e) {
-        console.error("Servo failed:", e);
+        // console.error("Servo failed:", e);
     }
 }
 
 /**
- * Keyboard Controls
+ * Keyboard Listeners
  */
 document.addEventListener('keydown', (e) => {
     if (!manualMode || e.repeat) return;
     
     switch(e.key) {
-        case 'w': case 'W': startMove('forward'); break;
-        case 's': case 'S': startMove('backward'); break;
-        case 'a': case 'A': startMove('left'); break;
-        case 'd': case 'D': startMove('right'); break;
+        case 'w': case 'W': inputState.forward = true; break;
+        case 's': case 'S': inputState.backward = true; break;
+        case 'a': case 'A': inputState.left = true; break;
+        case 'd': case 'D': inputState.right = true; break;
         
-        case 'ArrowUp': startServoMove('up'); e.preventDefault(); break;
-        case 'ArrowDown': startServoMove('down'); e.preventDefault(); break;
-        case 'ArrowLeft': startServoMove('left'); e.preventDefault(); break;
-        case 'ArrowRight': startServoMove('right'); e.preventDefault(); break;
+        case 'ArrowUp': inputState.camUp = true; e.preventDefault(); break;
+        case 'ArrowDown': inputState.camDown = true; e.preventDefault(); break;
+        case 'ArrowLeft': inputState.camLeft = true; e.preventDefault(); break;
+        case 'ArrowRight': inputState.camRight = true; e.preventDefault(); break;
     }
 });
 
@@ -162,19 +213,15 @@ document.addEventListener('keyup', (e) => {
     if (!manualMode) return;
 
     switch(e.key) {
-        case 'w': case 'W': 
-        case 's': case 'S': 
-        case 'a': case 'A': 
-        case 'd': case 'D': 
-            stopMove(); 
-            break;
+        case 'w': case 'W': inputState.forward = false; break;
+        case 's': case 'S': inputState.backward = false; break;
+        case 'a': case 'A': inputState.left = false; break;
+        case 'd': case 'D': inputState.right = false; break;
         
-        case 'ArrowUp': 
-        case 'ArrowDown': 
-        case 'ArrowLeft': 
-        case 'ArrowRight': 
-            stopServoMove(); 
-            break;
+        case 'ArrowUp': inputState.camUp = false; break;
+        case 'ArrowDown': inputState.camDown = false; break;
+        case 'ArrowLeft': inputState.camLeft = false; break;
+        case 'ArrowRight': inputState.camRight = false; break;
     }
 });
 
