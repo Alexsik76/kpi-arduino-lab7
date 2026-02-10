@@ -100,6 +100,11 @@ async def set_manual_mode(request: ManualModeRequest):
     return {"status": "ok", "manual_mode": request.enabled}
 
 
+@app.get("/control/mode")
+async def get_manual_mode():
+    return {"manual_mode": system.manual_mode}
+
+
 @app.post("/control/move")
 async def control_move(request: MotorControlRequest):
     if not system.manual_mode:

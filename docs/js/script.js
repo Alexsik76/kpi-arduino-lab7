@@ -242,13 +242,29 @@ let isOnline = false;
  */
 async function checkSystem() {
     try {
-        const response = await fetch(`${CONFIG.host}${CONFIG.endpoints.health}`);
+        // Parallel checks
+        const [healthRes, modeRes] = await Promise.all([
+            fetch(`${CONFIG.host}${CONFIG.endpoints.health}`),
+            fetch(`${CONFIG.host}${CONFIG.endpoints.mode}`)
+        ]);
         
-        if (response.ok) {
+        if (healthRes.ok) {
             if (!isOnline) goOnline();
         } else {
             if (isOnline) goOffline();
         }
+
+        if (modeRes.ok) {
+            const data = await modeRes.json();
+            // Only update if changed to avoid interference? 
+            // Actually, server truth should prevail on sync.
+            if (manualMode !== data.manual_mode) {
+                manualMode = data.manual_mode;
+                document.getElementById('manual-mode-toggle').checked = manualMode;
+                document.getElementById('manual-controls').style.display = manualMode ? 'block' : 'none';
+            }
+        }
+
     } catch (error) {
         if (isOnline) goOffline();
         console.warn("System unreachable");
