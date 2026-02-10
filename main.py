@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from core import TrackingSystem
 
 logging.basicConfig(
@@ -74,6 +75,47 @@ async def video_feed():
     return StreamingResponse(
         generate_mjpeg(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+# --- Manual Control Endpoints ---
+
+
+class ManualModeRequest(BaseModel):
+    enabled: bool
+
+
+class MotorControlRequest(BaseModel):
+    left: int
+    right: int
+
+
+class ServoControlRequest(BaseModel):
+    pan: int
+    tilt: int
+
+
+@app.post("/control/mode")
+async def set_manual_mode(request: ManualModeRequest):
+    system.set_manual_mode(request.enabled)
+    return {"status": "ok", "manual_mode": request.enabled}
+
+
+@app.post("/control/move")
+async def control_move(request: MotorControlRequest):
+    if not system.manual_mode:
+        return {"status": "error", "message": "Manual mode not enabled"}
+
+    system.set_motor_speed(request.left, request.right)
+    return {"status": "ok", "left": request.left, "right": request.right}
+
+
+@app.post("/control/servo")
+async def control_servo(request: ServoControlRequest):
+    if not system.manual_mode:
+        return {"status": "error", "message": "Manual mode not enabled"}
+
+    system.set_servo_angle(request.pan, request.tilt)
+    return {"status": "ok", "pan": request.pan, "tilt": request.tilt}
 
 
 if __name__ == "__main__":

@@ -5,10 +5,101 @@ const CONFIG = {
     host: 'https://robot.lab.vn.ua',
     endpoints: {
         health: '/health',
-        feed: '/video_feed'
+        feed: '/video_feed',
+        mode: '/control/mode',
+        move: '/control/move',
+        servo: '/control/servo'
     },
     interval: 5000 
 };
+
+// State
+let manualMode = false;
+let currentPan = 90;
+let currentTilt = 90;
+
+/**
+ * Toggle Manual Mode
+ */
+async function toggleManualMode() {
+    const checkbox = document.getElementById('manual-mode-toggle');
+    const controls = document.getElementById('manual-controls');
+    manualMode = checkbox.checked;
+
+    controls.style.display = manualMode ? 'block' : 'none';
+
+    try {
+        await fetch(`${CONFIG.host}${CONFIG.endpoints.mode}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: manualMode })
+        });
+    } catch (e) {
+        console.error("Failed to toggle mode:", e);
+    }
+}
+
+/**
+ * Platform Movement Control
+ */
+async function startMove(direction) {
+    if (!manualMode) return;
+    
+    let left = 0, right = 0;
+    const speed = 100;
+
+    switch(direction) {
+        case 'forward': left = speed; right = speed; break;
+        case 'backward': left = -speed; right = -speed; break;
+        case 'left': left = -speed; right = speed; break;
+        case 'right': left = speed; right = -speed; break;
+    }
+
+    sendMove(left, right);
+}
+
+function stopMove() {
+    if (!manualMode) return;
+    sendMove(0, 0);
+}
+
+async function sendMove(left, right) {
+    try {
+        await fetch(`${CONFIG.host}${CONFIG.endpoints.move}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ left, right })
+        });
+    } catch (e) {
+        console.error("Move failed:", e);
+    }
+}
+
+/**
+ * Servo Control
+ */
+async function moveServo(direction) {
+    if (!manualMode) return;
+
+    const step = 10;
+    
+    switch(direction) {
+        case 'up': currentTilt = Math.max(50, currentTilt - step); break;
+        case 'down': currentTilt = Math.min(130, currentTilt + step); break;
+        case 'left': currentPan = Math.min(180, currentPan + step); break;
+        case 'right': currentPan = Math.max(0, currentPan - step); break;
+    }
+
+    try {
+        await fetch(`${CONFIG.host}${CONFIG.endpoints.servo}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pan: currentPan, tilt: currentTilt })
+        });
+    } catch (e) {
+        console.error("Servo failed:", e);
+    }
+}
 
 /**
  * DOM Elements Cache

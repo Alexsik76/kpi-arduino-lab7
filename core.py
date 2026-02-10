@@ -13,6 +13,7 @@ logger = logging.getLogger("Core")
 class TrackingSystem:
     def __init__(self, enable_logging=False):
         self.running = False
+        self.manual_mode = False
         self.lock = threading.Lock()
 
         self.current_frame = None
@@ -54,9 +55,25 @@ class TrackingSystem:
 
     def _init_control(self):
         self.pid_pan = PIDController(kp=0.035, ki=0.0, kd=0.02, min_val=0, max_val=180)
-        self.pid_tilt = PIDController(kp=0.035, ki=0.0, kd=0.02, min_val=45, max_val=135)
+        self.pid_tilt = PIDController(
+            kp=0.035, ki=0.0, kd=0.02, min_val=45, max_val=135
+        )
         self.invert_pan = True
         self.invert_tilt = False
+
+    def set_manual_mode(self, enabled: bool):
+        self.manual_mode = enabled
+        logger.info(f"Manual mode set to {enabled}")
+
+    def set_motor_speed(self, left: int, right: int):
+        if self.manual_mode:
+            self.pico.send_motor_cmd(left, right)
+
+    def set_servo_angle(self, pan: int, tilt: int):
+        if self.manual_mode:
+            self.pan_angle = pan
+            self.tilt_angle = tilt
+            self.pico.send_cmd(pan, tilt)
 
     def start(self):
         if self.running:
@@ -116,7 +133,7 @@ class TrackingSystem:
                 log_error_y = error_y
 
                 # PID calculation
-                if error_x != 0 or error_y != 0:
+                if not self.manual_mode and (error_x != 0 or error_y != 0):
                     delta_pan = self.pid_pan.compute(0, error_x)
                     delta_tilt = self.pid_tilt.compute(0, error_y)
 

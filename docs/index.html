@@ -1,44 +1,122 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Robot Vision Control</title>
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
 
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
     <main class="monitor">
-        <article>
-            <header>
-                <nav>
-                    <ul>
-                        <li><strong>👁️ Robot Eye v2.0</strong></li>
-                    </ul>
-                    <ul>
-                        <li>
-                            <small id="status-text">Connecting...</small>
-                            <span id="status-dot" class="status-dot off"></span>
-                        </li>
-                    </ul>
-                </nav>
-            </header>
+      <article>
+        <header>
+          <nav>
+            <ul>
+              <li>
+                <label>
+                  <input
+                    type="checkbox"
+                    id="manual-mode-toggle"
+                    onchange="toggleManualMode()"
+                  />
+                  Manual Mode
+                </label>
+              </li>
+              <li>
+                <small id="status-text">Connecting...</small>
+                <span id="status-dot" class="status-dot off"></span>
+              </li>
+            </ul>
+          </nav>
+        </header>
 
-            <div class="stream-box" id="video-container">
-                <div class="offline-msg" id="placeholder">Connecting to Neural Core...</div>
+        <div class="stream-box" id="video-container">
+          <div class="offline-msg" id="placeholder">
+            Connecting to Neural Core...
+          </div>
+        </div>
+
+        <!-- Manual Controls UI -->
+        <div id="manual-controls" style="display: none; padding: 20px">
+          <div class="grid">
+            <!-- Platform Control (WASD) -->
+            <div>
+              <h4>Platform</h4>
+              <div class="control-grid">
+                <div></div>
+                <button
+                  onmousedown="startMove('forward')"
+                  onmouseup="stopMove()"
+                  ontouchstart="startMove('forward')"
+                  ontouchend="stopMove()"
+                >
+                  ▲
+                </button>
+                <div></div>
+                <button
+                  onmousedown="startMove('left')"
+                  onmouseup="stopMove()"
+                  ontouchstart="startMove('left')"
+                  ontouchend="stopMove()"
+                >
+                  ◀
+                </button>
+                <button
+                  onmousedown="startMove('backward')"
+                  onmouseup="stopMove()"
+                  ontouchstart="startMove('backward')"
+                  ontouchend="stopMove()"
+                >
+                  ▼
+                </button>
+                <button
+                  onmousedown="startMove('right')"
+                  onmouseup="stopMove()"
+                  ontouchstart="startMove('right')"
+                  ontouchend="stopMove()"
+                >
+                  ▶
+                </button>
+              </div>
             </div>
 
-            <footer>
-                <div class="grid">
-                    <button class="secondary outline" onclick="checkSystem()">Ping System</button>
-                    <a href="https://robot.lab.vn.ua/docs" target="_blank" role="button" class="contrast outline">API Docs</a>
-                </div>
-            </footer>
-        </article>
+            <!-- Servo Control -->
+            <div>
+              <h4>Camera</h4>
+              <div class="control-grid">
+                <div></div>
+                <button onclick="moveServo('up')">▲</button>
+                <div></div>
+                <button onclick="moveServo('left')">◀</button>
+                <button onclick="moveServo('down')">▼</button>
+                <button onclick="moveServo('right')">▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer>
+          <div class="grid">
+            <button class="secondary outline" onclick="checkSystem()">
+              Ping System
+            </button>
+            <a
+              href="https://robot.lab.vn.ua/docs"
+              target="_blank"
+              role="button"
+              class="contrast outline"
+              >API Docs</a
+            >
+          </div>
+        </footer>
+      </article>
     </main>
 
     <script src="js/script.js"></script>
-</body>
+  </body>
 </html>
