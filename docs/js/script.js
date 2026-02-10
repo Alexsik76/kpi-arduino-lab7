@@ -78,9 +78,9 @@ let isMoveRequestPending = false;
 let nextMoveCommand = null;
 
 function processPlatform() {
-    const speed = 100;
-    const turnSpeed = 35;
-    const turnReduction = 0.5;
+    let speed = 100;
+    let turnSpeed = 35;
+    let turnReduction = 0.5;
 
     let left = 0;
     let right = 0;
@@ -98,21 +98,26 @@ function processPlatform() {
         else { right *= turnReduction; }
     }
 
-    const now = Date.now();
     const currentLeft = Math.round(left);
     const currentRight = Math.round(right);
-    
+    const now = Date.now();
+
     const isChanged = (currentLeft !== lastLeft || currentRight !== lastRight);
+    
     const isMoving = (currentLeft !== 0 || currentRight !== 0);
-    const isHeartbeatNeeded = (now - lastSentTime > 200);
+
+    const isHeartbeatNeeded = isMoving && (now - lastSentTime > 150);
 
     if (isChanged || isHeartbeatNeeded) {
         lastLeft = currentLeft;
         lastRight = currentRight;
         lastSentTime = now;
         
-        // Call the managed sender instead of direct fetch
-        sendMoveManaged(lastLeft, lastRight);
+        
+        if (typeof sendMoveManaged === 'function') {
+            sendMoveManaged(lastLeft, lastRight);
+        } else {
+            sendMove(lastLeft, lastRight); 
     }
 }
 
