@@ -81,7 +81,7 @@ async function sendMove(left, right) {
 async function moveServo(direction) {
     if (!manualMode) return;
 
-    const step = 10;
+    const step = 1;
     
     switch(direction) {
         case 'up': currentTilt = Math.max(50, currentTilt - step); break;
