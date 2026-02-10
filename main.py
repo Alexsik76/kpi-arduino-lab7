@@ -121,4 +121,6 @@ async def control_servo(request: ServoControlRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio")
+    uvicorn.run(
+        app, host="0.0.0.0", port=8000, loop="asyncio", timeout_graceful_shutdown=1
+    )

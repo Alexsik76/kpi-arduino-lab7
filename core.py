@@ -44,8 +44,9 @@ class TrackingSystem:
         self.target_r = 0
         self.current_l = 0.0
         self.current_r = 0.0
+        self.min_moving_speed = 45  # Jump start speed
         self.motor_max_speed = 85  # Limited to ~85%
-        self.ramp_step = 6.0  # Speed change per loop iteration (~60ms to full speed)
+        self.ramp_step = 6.0  # Speed change per loop iteration
 
     def _init_hardware(self):
         self.pico = PicoController(port="/dev/serial0")
@@ -75,13 +76,27 @@ class TrackingSystem:
 
     def set_motor_speed(self, left: int, right: int):
         if self.manual_mode:
-            # Clamp and scale input (assumed -100 to 100)
-            def scale_speed(val):
-                clamped = max(-100, min(100, val))
-                return int(clamped * (self.motor_max_speed / 100.0))
+            # Linear Mapping: 0 -> 0, 1..100 -> 45..85
+            def map_speed(val):
+                if val == 0:
+                    return 0
 
-            self.target_l = scale_speed(left)
-            self.target_r = scale_speed(right)
+                # Input range 1..100 maps to 45..85
+                sign = 1 if val > 0 else -1
+                abs_val = abs(val)
+
+                # Fraction (0.0 to 1.0) of usable range
+                # If val=1 (min input) -> 0.0
+                # If val=100 (max input) -> 1.0
+                ratio = (abs_val - 1) / 99.0 if abs_val > 1 else 0.0
+
+                pwm_range = self.motor_max_speed - self.min_moving_speed
+                pwm_out = self.min_moving_speed + (ratio * pwm_range)
+
+                return int(pwm_out * sign)
+
+            self.target_l = map_speed(left)
+            self.target_r = map_speed(right)
 
     def set_servo_angle(self, pan: int, tilt: int):
         if self.manual_mode:
@@ -197,6 +212,14 @@ class TrackingSystem:
             changed_l = False
             changed_r = False
 
+            # Jump Start Logic (Left)
+            if self.target_l != 0 and self.current_l == 0:
+                if self.target_l > 0:
+                    self.current_l = float(self.min_moving_speed)
+                else:
+                    self.current_l = float(-self.min_moving_speed)
+                changed_l = True
+
             # Left Motor Ramp
             if self.current_l < self.target_l:
                 self.current_l = min(self.target_l, self.current_l + self.ramp_step)
@@ -204,6 +227,14 @@ class TrackingSystem:
             elif self.current_l > self.target_l:
                 self.current_l = max(self.target_l, self.current_l - self.ramp_step)
                 changed_l = True
+
+            # Jump Start Logic (Right)
+            if self.target_r != 0 and self.current_r == 0:
+                if self.target_r > 0:
+                    self.current_r = float(self.min_moving_speed)
+                else:
+                    self.current_r = float(-self.min_moving_speed)
+                changed_r = True
 
             # Right Motor Ramp
             if self.current_r < self.target_r:
