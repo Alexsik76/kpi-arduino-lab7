@@ -10,7 +10,7 @@ const CONFIG = {
         move: '/control/move',
         servo: '/control/servo'
     },
-    interval: 5000 
+    interval: 5000
 };
 
 // State
@@ -40,7 +40,7 @@ async function toggleManualMode() {
 }
 
 /**
- * Input State & Game Loop
+ * Input State
  */
 const inputState = {
     forward: false,
@@ -57,11 +57,6 @@ const inputState = {
 function setInput(action, active) {
     if (!manualMode) return;
     inputState[action] = active;
-    
-    // Prevent mouse stickiness if dragging out of button
-    if (!active) {
-        // safety clear all if needed, but usually just the one is enough
-    }
 }
 
 // Main Control Loop (20Hz = 50ms)
@@ -72,16 +67,20 @@ setInterval(() => {
 }, 50);
 
 /**
- * Platform Logic
+ * Platform Logic & Network Flow Control
  */
 let lastLeft = 0;
 let lastRight = 0;
 let lastSentTime = 0;
 
+// Network Flow Control Variables
+let isMoveRequestPending = false;
+let nextMoveCommand = null;
+
 function processPlatform() {
-    let speed = 100;
-    let turnSpeed = 35;
-    let turnReduction = 0.5;
+    const speed = 100;
+    const turnSpeed = 35;
+    const turnReduction = 0.5;
 
     let left = 0;
     let right = 0;
@@ -100,27 +99,60 @@ function processPlatform() {
     }
 
     const now = Date.now();
-    const isChanged = (Math.round(left) !== lastLeft || Math.round(right) !== lastRight);
+    const currentLeft = Math.round(left);
+    const currentRight = Math.round(right);
+    
+    const isChanged = (currentLeft !== lastLeft || currentRight !== lastRight);
     const isHeartbeatNeeded = (now - lastSentTime > 150);
 
     if (isChanged || isHeartbeatNeeded) {
-        lastLeft = Math.round(left);
-        lastRight = Math.round(right);
+        lastLeft = currentLeft;
+        lastRight = currentRight;
         lastSentTime = now;
-        sendMove(lastLeft, lastRight);
+        
+        // Call the managed sender instead of direct fetch
+        sendMoveManaged(lastLeft, lastRight);
     }
 }
 
-async function sendMove(left, right) {
+/**
+ * Managed Sender
+ * Implements a "latest-state" buffer. If a request is currently flying,
+ * it queues the NEWEST command and sends it immediately after the current one finishes.
+ * This prevents network flooding and ensures the "STOP" command is never lost in a queue.
+ */
+async function sendMoveManaged(left, right) {
+    // If a request is already in progress, overwrite the "next" command with the latest state
+    if (isMoveRequestPending) {
+        nextMoveCommand = { left, right };
+        return;
+    }
+
+    isMoveRequestPending = true;
+
     try {
-        await fetch(`${CONFIG.host}${CONFIG.endpoints.move}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ left, right })
-        });
+        await fetchMove(left, right);
     } catch (e) {
         console.error("Move failed:", e);
+    } finally {
+        isMoveRequestPending = false;
+        
+        // If a new command arrived while we were busy, send it now
+        if (nextMoveCommand) {
+            const cmd = nextMoveCommand;
+            nextMoveCommand = null; // Clear queue
+            // Recursively call managed sender
+            sendMoveManaged(cmd.left, cmd.right);
+        }
     }
+}
+
+async function fetchMove(left, right) {
+    await fetch(`${CONFIG.host}${CONFIG.endpoints.move}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ left, right })
+    });
 }
 
 /**
@@ -128,9 +160,12 @@ async function sendMove(left, right) {
  */
 let lastPan = -1;
 let lastTilt = -1;
+// Servo Flow Control
+let isServoPending = false;
+let nextServoCommand = null;
 
 function processCamera() {
-    const step = 1; // 1 degree per tick (20 deg/sec)
+    const step = 1; 
     let changed = false;
 
     if (inputState.camUp) {
@@ -147,12 +182,9 @@ function processCamera() {
     }
 
     if (changed || (currentPan !== lastPan || currentTilt !== lastTilt)) {
-        // Rate limit sending commands is handled by backend somewhat, 
-        // but we can also optimize here to not flood network if backend is slow.
-        // For now, fire and forget.
-        sendServoCommand();
         lastPan = currentPan;
         lastTilt = currentTilt;
+        sendServoManaged(lastPan, lastTilt);
     }
 }
 
@@ -164,18 +196,31 @@ async function centerCamera() {
     inputState.camDown = false;
     inputState.camLeft = false;
     inputState.camRight = false;
-    sendServoCommand();
+    sendServoManaged(90, 90);
 }
 
-async function sendServoCommand() {
+// Similar managed sender for servos to prevent jitter
+async function sendServoManaged(pan, tilt) {
+    if (isServoPending) {
+        nextServoCommand = { pan, tilt };
+        return;
+    }
+    isServoPending = true;
     try {
         await fetch(`${CONFIG.host}${CONFIG.endpoints.servo}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pan: currentPan, tilt: currentTilt })
+            body: JSON.stringify({ pan, tilt })
         });
     } catch (e) {
         // console.error("Servo failed:", e);
+    } finally {
+        isServoPending = false;
+        if (nextServoCommand) {
+            const cmd = nextServoCommand;
+            nextServoCommand = null;
+            sendServoManaged(cmd.pan, cmd.tilt);
+        }
     }
 }
 
@@ -215,7 +260,7 @@ document.addEventListener('keyup', (e) => {
 });
 
 /**
- * DOM Elements Cache
+ * DOM Elements Cache & System Check (Unchanged logic, kept for completeness)
  */
 const els = {
     dot: document.getElementById('status-dot'),
@@ -225,12 +270,8 @@ const els = {
 
 let isOnline = false;
 
-/**
- * Main Status Checker
- */
 async function checkSystem() {
     try {
-        // Parallel checks
         const [healthRes, modeRes] = await Promise.all([
             fetch(`${CONFIG.host}${CONFIG.endpoints.health}`),
             fetch(`${CONFIG.host}${CONFIG.endpoints.mode}`)
@@ -244,8 +285,6 @@ async function checkSystem() {
 
         if (modeRes.ok) {
             const data = await modeRes.json();
-            // Only update if changed to avoid interference? 
-            // Actually, server truth should prevail on sync.
             if (manualMode !== data.manual_mode) {
                 manualMode = data.manual_mode;
                 document.getElementById('manual-mode-toggle').checked = manualMode;
@@ -259,32 +298,22 @@ async function checkSystem() {
     }
 }
 
-/**
- * Switch UI to Online State
- */
 function goOnline() {
     isOnline = true;
     els.dot.className = 'status-dot on';
     els.text.innerText = 'ONLINE';
     els.text.style.color = '#2ecc71';
-    
-    // Inject Stream with cache-buster
     els.container.innerHTML = `<img src="${CONFIG.host}${CONFIG.endpoints.feed}?t=${Date.now()}" alt="Live Feed">`;
 }
 
-/**
- * Switch UI to Offline State
- */
 function goOffline() {
     isOnline = false;
     els.dot.className = 'status-dot off';
     els.text.innerText = 'OFFLINE';
     els.text.style.color = '#e74c3c';
-    
     els.container.innerHTML = `<div class="offline-msg">⚠️ SIGNAL LOST</div>`;
 }
 
-// Global initialization
 document.addEventListener('DOMContentLoaded', () => {
     checkSystem();
     setInterval(checkSystem, CONFIG.interval);
