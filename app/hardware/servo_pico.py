@@ -1,7 +1,7 @@
 import serial
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class PicoController:
         if not self.serial:
             return
 
-        command = {"left": int(left), "right": int(right)}
+        command = {"l": int(left), "r": int(right)}
 
         try:
             # Prepare payload: JSON + \n
