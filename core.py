@@ -39,6 +39,14 @@ class TrackingSystem:
         self.last_sent_pan = -1
         self.last_sent_tilt = -1
 
+        # --- MOTOR CONTROL: SMOOTH RAMPING ---
+        self.target_l = 0
+        self.target_r = 0
+        self.current_l = 0.0
+        self.current_r = 0.0
+        self.motor_max_speed = 85  # Limited to ~85%
+        self.ramp_step = 6.0  # Speed change per loop iteration (~60ms to full speed)
+
     def _init_hardware(self):
         self.pico = PicoController(port="/dev/serial0")
         self.cap = cv2.VideoCapture(0)
@@ -67,7 +75,13 @@ class TrackingSystem:
 
     def set_motor_speed(self, left: int, right: int):
         if self.manual_mode:
-            self.pico.send_motor_cmd(left, right)
+            # Clamp and scale input (assumed -100 to 100)
+            def scale_speed(val):
+                clamped = max(-100, min(100, val))
+                return int(clamped * (self.motor_max_speed / 100.0))
+
+            self.target_l = scale_speed(left)
+            self.target_r = scale_speed(right)
 
     def set_servo_angle(self, pan: int, tilt: int):
         if self.manual_mode:
@@ -106,73 +120,101 @@ class TrackingSystem:
                 time.sleep(0.1)
                 continue
 
-            face_box, landmarks = self.detector.find_face(frame)
+            # 1. Face Tracking (Only in Auto Mode)
+            if not self.manual_mode:
+                face_box, landmarks = self.detector.find_face(frame)
 
-            log_error_x = 0
-            log_error_y = 0
-            delta_pan = 0
-            delta_tilt = 0
+                log_error_x = 0
+                log_error_y = 0
+                delta_pan = 0
+                delta_tilt = 0
 
-            if face_box is not None and landmarks is not None:
-                x, y, w, h = face_box
-                nose_x, nose_y = landmarks[4], landmarks[5]
+                if face_box is not None and landmarks is not None:
+                    x, y, w, h = face_box
+                    nose_x, nose_y = landmarks[4], landmarks[5]
 
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.circle(frame, (nose_x, nose_y), 5, (0, 0, 255), -1)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.circle(frame, (nose_x, nose_y), 5, (0, 0, 255), -1)
 
-                error_x = nose_x - self.center_x
-                error_y = nose_y - self.center_y
+                    error_x = nose_x - self.center_x
+                    error_y = nose_y - self.center_y
 
-                # Dead zone (slightly increased)
-                if abs(error_x) < 25:
-                    error_x = 0
-                if abs(error_y) < 25:
-                    error_y = 0
+                    # Dead zone (slightly increased)
+                    if abs(error_x) < 25:
+                        error_x = 0
+                    if abs(error_y) < 25:
+                        error_y = 0
 
-                log_error_x = error_x
-                log_error_y = error_y
+                    log_error_x = error_x
+                    log_error_y = error_y
 
-                # PID calculation
-                if not self.manual_mode and (error_x != 0 or error_y != 0):
-                    if error_x != 0:
-                        delta_pan = self.pid_pan.compute(0, error_x)
-                    else:
-                        delta_pan = 0
+                    # PID calculation
+                    if error_x != 0 or error_y != 0:
+                        if error_x != 0:
+                            delta_pan = self.pid_pan.compute(0, error_x)
+                        else:
+                            delta_pan = 0
 
-                    if error_y != 0:
-                        delta_tilt = self.pid_tilt.compute(0, error_y)
-                    else:
-                        delta_tilt = 0
+                        if error_y != 0:
+                            delta_tilt = self.pid_tilt.compute(0, error_y)
+                        else:
+                            delta_tilt = 0
 
-                    if self.invert_pan:
-                        delta_pan *= -1
-                    if self.invert_tilt:
-                        delta_tilt *= -1
+                        if self.invert_pan:
+                            delta_pan *= -1
+                        if self.invert_tilt:
+                            delta_tilt *= -1
 
-                    self.pan_angle += delta_pan
-                    self.tilt_angle += delta_tilt
+                        self.pan_angle += delta_pan
+                        self.tilt_angle += delta_tilt
 
-                    # Angle limits
-                    self.pan_angle = max(0, min(180, self.pan_angle))
-                    self.tilt_angle = max(50, min(130, self.tilt_angle))
+                        # Angle limits
+                        self.pan_angle = max(0, min(180, self.pan_angle))
+                        self.tilt_angle = max(50, min(130, self.tilt_angle))
 
-                    # --- SAFETY: Rate Limiting ---
-                    current_time = time.time()
+                        # --- SAFETY: Rate Limiting ---
+                        current_time = time.time()
 
-                    # Send command ONLY if 0.1s passed OR angle changed significantly (>2 degrees)
-                    time_ok = (
-                        current_time - self.last_command_time
-                    ) > self.command_interval
-                    angle_changed_significantly = (
-                        abs(self.pan_angle - self.last_sent_pan) > 1.0
-                        or abs(self.tilt_angle - self.last_sent_tilt) > 1.0
-                    )
+                        # Send command ONLY if 0.1s passed OR angle changed significantly (>2 degrees)
+                        time_ok = (
+                            current_time - self.last_command_time
+                        ) > self.command_interval
+                        angle_changed_significantly = (
+                            abs(self.pan_angle - self.last_sent_pan) > 1.0
+                            or abs(self.tilt_angle - self.last_sent_tilt) > 1.0
+                        )
 
-                    if time_ok and angle_changed_significantly:
-                        self.pico.send_cmd(int(self.pan_angle), int(self.tilt_angle))
-                        self.last_command_time = current_time
-                        self.last_sent_pan = self.pan_angle
-                        self.last_sent_tilt = self.tilt_angle
+                        if time_ok and angle_changed_significantly:
+                            self.pico.send_cmd(
+                                int(self.pan_angle), int(self.tilt_angle)
+                            )
+                            self.last_command_time = current_time
+                            self.last_sent_pan = self.pan_angle
+                            self.last_sent_tilt = self.tilt_angle
+
+            # 2. Motor Control (Smooth Ramping - Always Active)
+            # This allows smooth stop even if switching modes
+            changed_l = False
+            changed_r = False
+
+            # Left Motor Ramp
+            if self.current_l < self.target_l:
+                self.current_l = min(self.target_l, self.current_l + self.ramp_step)
+                changed_l = True
+            elif self.current_l > self.target_l:
+                self.current_l = max(self.target_l, self.current_l - self.ramp_step)
+                changed_l = True
+
+            # Right Motor Ramp
+            if self.current_r < self.target_r:
+                self.current_r = min(self.target_r, self.current_r + self.ramp_step)
+                changed_r = True
+            elif self.current_r > self.target_r:
+                self.current_r = max(self.target_r, self.current_r - self.ramp_step)
+                changed_r = True
+
+            if changed_l or changed_r:
+                self.pico.send_motor_cmd(int(self.current_l), int(self.current_r))
 
             # Logging can remain per frame, low overhead
             if self.logger:
