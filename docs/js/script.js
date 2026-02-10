@@ -103,7 +103,8 @@ function processPlatform() {
     const currentRight = Math.round(right);
     
     const isChanged = (currentLeft !== lastLeft || currentRight !== lastRight);
-    const isHeartbeatNeeded = (now - lastSentTime > 150);
+    const isMoving = (currentLeft !== 0 || currentRight !== 0);
+    const isHeartbeatNeeded = (now - lastSentTime > 200);
 
     if (isChanged || isHeartbeatNeeded) {
         lastLeft = currentLeft;

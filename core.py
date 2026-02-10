@@ -212,41 +212,59 @@ class TrackingSystem:
             changed_l = False
             changed_r = False
 
-            # Jump Start Logic (Left)
-            if self.target_l != 0 and self.current_l == 0:
-                if self.target_l > 0:
-                    self.current_l = float(self.min_moving_speed)
-                else:
-                    self.current_l = float(-self.min_moving_speed)
-                changed_l = True
+            # --- LEFT MOTOR LOGIC ---
+            if self.target_l == 0:
+                # HARD STOP: Якщо відпустили кнопку - зупиняємось миттєво!
+                if self.current_l != 0:
+                    self.current_l = 0.0
+                    changed_l = True
+            else:
+                # Normal Operation (Acceleration)
+                
+                # Jump Start Logic (Left)
+                if self.current_l == 0:
+                    if self.target_l > 0:
+                        self.current_l = float(self.min_moving_speed)
+                    else:
+                        self.current_l = float(-self.min_moving_speed)
+                    changed_l = True
 
-            # Left Motor Ramp
-            if self.current_l < self.target_l:
-                self.current_l = min(self.target_l, self.current_l + self.ramp_step)
-                changed_l = True
-            elif self.current_l > self.target_l:
-                self.current_l = max(self.target_l, self.current_l - self.ramp_step)
-                changed_l = True
+                # Left Motor Ramp
+                if self.current_l < self.target_l:
+                    self.current_l = min(self.target_l, self.current_l + self.ramp_step)
+                    changed_l = True
+                elif self.current_l > self.target_l:
+                    self.current_l = max(self.target_l, self.current_l - self.ramp_step)
+                    changed_l = True
 
-            # Jump Start Logic (Right)
-            if self.target_r != 0 and self.current_r == 0:
-                if self.target_r > 0:
-                    self.current_r = float(self.min_moving_speed)
-                else:
-                    self.current_r = float(-self.min_moving_speed)
-                changed_r = True
+            # --- RIGHT MOTOR LOGIC ---
+            if self.target_r == 0:
+                # HARD STOP: Якщо відпустили кнопку - зупиняємось миттєво!
+                if self.current_r != 0:
+                    self.current_r = 0.0
+                    changed_r = True
+            else:
+                # Normal Operation (Acceleration)
 
-            # Right Motor Ramp
-            if self.current_r < self.target_r:
-                self.current_r = min(self.target_r, self.current_r + self.ramp_step)
-                changed_r = True
-            elif self.current_r > self.target_r:
-                self.current_r = max(self.target_r, self.current_r - self.ramp_step)
-                changed_r = True
+                # Jump Start Logic (Right)
+                if self.current_r == 0:
+                    if self.target_r > 0:
+                        self.current_r = float(self.min_moving_speed)
+                    else:
+                        self.current_r = float(-self.min_moving_speed)
+                    changed_r = True
 
+                # Right Motor Ramp
+                if self.current_r < self.target_r:
+                    self.current_r = min(self.target_r, self.current_r + self.ramp_step)
+                    changed_r = True
+                elif self.current_r > self.target_r:
+                    self.current_r = max(self.target_r, self.current_r - self.ramp_step)
+                    changed_r = True
+
+            # Send command if needed
             if changed_l or changed_r:
                 self.pico.send_motor_cmd(int(self.current_l), int(self.current_r))
-
             # Logging can remain per frame, low overhead
             if self.logger:
                 self.logger.log(
