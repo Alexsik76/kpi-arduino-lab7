@@ -5,7 +5,7 @@ import logging
 from app.utils.data_logger import DataLogger
 from app.hardware.servo_pico import PicoController
 from app.tracking.face_utils import FaceDetector
-from app.control.pid import PIDController
+from app.control.servo_actor import PanTiltHead  # New import
 
 logger = logging.getLogger("Core")
 
@@ -28,21 +28,16 @@ class TrackingSystem:
         # Subsystems
         self._init_hardware()
         self._init_ai()
-        self._init_control()
+        
+        # Control System (The Actor)
+        self.head = PanTiltHead(self.pico)  # Inject Pico into Head
 
         # Logging
         self.logger = DataLogger() if enable_logging else None
 
-        # State / Safety
-        self.last_command_time = 0
-        self.command_interval = 0.03  # Max servo rate
-        self.last_sent_pan = -1
-        self.last_sent_tilt = -1
-
         # Motor State
         self.target_l = 0
         self.target_r = 0
-        # No ramping logic here anymore, physics is on Pico
 
     def _init_hardware(self):
         self.pico = PicoController(port="/dev/serial0")
@@ -50,17 +45,9 @@ class TrackingSystem:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        self.pan_angle = 90
-        self.tilt_angle = 90
 
     def _init_ai(self):
         self.detector = FaceDetector(score_threshold=0.7)
-
-    def _init_control(self):
-        self.pid_pan = PIDController(kp=0.035, ki=0.0, kd=0.02, min_val=0, max_val=180)
-        self.pid_tilt = PIDController(kp=0.035, ki=0.0, kd=0.02, min_val=45, max_val=135)
-        self.invert_pan = True
-        self.invert_tilt = False
 
     # --- PUBLIC API ---
 
@@ -70,12 +57,11 @@ class TrackingSystem:
 
     def set_motor_speed(self, left: int, right: int):
         if self.manual_mode:
-            # Simple mapping logic, simply creating target values
+            # Mapping logic can be moved to a util later if needed
             def map_speed(val):
                 if val == 0: return 0
                 sign = 1 if val > 0 else -1
                 abs_val = abs(val)
-                # Input range 1..100 maps to 45..85 (min_moving to max)
                 min_s, max_s = 45, 85
                 ratio = (abs_val - 1) / 99.0 if abs_val > 1 else 0.0
                 pwm_out = min_s + (ratio * (max_s - min_s))
@@ -83,14 +69,10 @@ class TrackingSystem:
 
             self.target_l = map_speed(left)
             self.target_r = map_speed(right)
-            # Immediate send could be added here for lower latency,
-            # but _loop handles it cleanly too.
 
     def set_servo_angle(self, pan: int, tilt: int):
         if self.manual_mode:
-            self.pan_angle = pan
-            self.tilt_angle = tilt
-            self.pico.send_cmd(pan, tilt)
+            self.head.manual_move(pan, tilt)
 
     def start(self):
         if self.running: return
@@ -110,7 +92,7 @@ class TrackingSystem:
         with self.lock:
             return self.jpeg_bytes
 
-    # --- INTERNAL LOGIC (Refactored) ---
+    # --- INTERNAL LOGIC ---
 
     def _capture_frame(self):
         """Reads a frame from the camera."""
@@ -121,12 +103,9 @@ class TrackingSystem:
         return frame
 
     def _run_auto_tracking(self, frame):
-        """Handles face detection, PID calculation, and servo movement."""
-        # Default stats for logging
-        stats = {
-            "err_x": 0, "err_y": 0,
-            "d_pan": 0, "d_tilt": 0
-        }
+        """Delegates tracking logic to the Head Actor."""
+        # Default stats
+        stats = {"err_x": 0, "err_y": 0, "d_pan": 0, "d_tilt": 0}
 
         face_box, landmarks = self.detector.find_face(frame)
         if face_box is None or landmarks is None:
@@ -142,7 +121,7 @@ class TrackingSystem:
         error_x = nose_x - self.center_x
         error_y = nose_y - self.center_y
 
-        # Dead zone
+        # Dead zone logic
         if abs(error_x) < 25: error_x = 0
         if abs(error_y) < 25: error_y = 0
 
@@ -152,40 +131,13 @@ class TrackingSystem:
         if error_x == 0 and error_y == 0:
             return stats
 
-        # PID Compute
-        delta_pan = self.pid_pan.compute(0, error_x) if error_x != 0 else 0
-        delta_tilt = self.pid_tilt.compute(0, error_y) if error_y != 0 else 0
-
-        if self.invert_pan: delta_pan *= -1
-        if self.invert_tilt: delta_tilt *= -1
-
-        stats["d_pan"] = delta_pan
-        stats["d_tilt"] = delta_tilt
-
-        # Apply changes
-        self.pan_angle = max(0, min(180, self.pan_angle + delta_pan))
-        self.tilt_angle = max(50, min(130, self.tilt_angle + delta_tilt))
-
-        # Send to Hardware (with rate limit)
-        self._send_servo_safe()
+        # DELEGATION: Ask the head to move
+        move_stats = self.head.track_target(error_x, error_y)
+        
+        # Merge stats for logging
+        stats.update(move_stats)
         
         return stats
-
-    def _send_servo_safe(self):
-        """Sends servo commands respecting rate limits."""
-        current_time = time.time()
-        time_ok = (current_time - self.last_command_time) > self.command_interval
-        
-        angle_changed = (
-            abs(self.pan_angle - self.last_sent_pan) > 1.0 or 
-            abs(self.tilt_angle - self.last_sent_tilt) > 1.0
-        )
-
-        if time_ok and angle_changed:
-            self.pico.send_cmd(int(self.pan_angle), int(self.tilt_angle))
-            self.last_command_time = current_time
-            self.last_sent_pan = self.pan_angle
-            self.last_sent_tilt = self.tilt_angle
 
     def _update_motors(self, last_sent_l, last_sent_r):
         """Sends motor commands ONLY if targets changed."""
@@ -195,7 +147,7 @@ class TrackingSystem:
         return last_sent_l, last_sent_r
 
     def _update_stream(self, frame):
-        """Encodes frame to JPEG for the web server."""
+        """Encodes frame to JPEG."""
         flag, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
         if flag:
             with self.lock:
@@ -223,9 +175,9 @@ class TrackingSystem:
             # 4. Logging
             if self.logger and log_stats:
                 self.logger.log(
-                    log_stats["err_x"], log_stats["err_y"],
-                    self.pan_angle, self.tilt_angle,
-                    log_stats["d_pan"], log_stats["d_tilt"]
+                    log_stats.get("err_x", 0), log_stats.get("err_y", 0),
+                    self.head.pan_angle, self.head.tilt_angle,
+                    log_stats.get("d_pan", 0), log_stats.get("d_tilt", 0)
                 )
 
             # 5. Stream
