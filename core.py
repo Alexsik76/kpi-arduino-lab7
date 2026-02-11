@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import threading
 import time
 import logging
@@ -93,6 +94,15 @@ class TrackingSystem:
             return self.jpeg_bytes
 
     # --- INTERNAL LOGIC ---
+    def _adjust_gamma(self, image, gamma=1.5):
+        """
+        gamma > 1.0 робить зображення світлішим (витягує тіні).
+        gamma < 1.0 робить темнішим.
+        """
+        invGamma = 1.0 / gamma
+        table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+        
+        return cv2.LUT(image, table)
 
     def _capture_frame(self):
         """Reads a frame from the camera."""
@@ -100,6 +110,7 @@ class TrackingSystem:
         if not ret:
             time.sleep(0.1)
             return None
+        frame = self._adjust_gamma(frame, gamma=1.8)
         return frame
 
     def _run_auto_tracking(self, frame):
