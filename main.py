@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -15,8 +15,7 @@ from core import TrackingSystem
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, 
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("API")
 
@@ -54,16 +53,40 @@ app = FastAPI(lifespan=lifespan, title="Robot Eye v2")
 
 # --- CORS & PRIVATE NETWORK ACCESS CONFIGURATION ---
 
+
+@app.middleware("http")
+async def private_network_access_middleware(request: Request, call_next):
+    """
+    Adds 'Access-Control-Allow-Private-Network: true' header to all responses.
+    Required by Chrome for requests from public origins to private/local networks.
+    """
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Private-Network": "true",
+                "Access-Control-Max-Age": "86400",
+            },
+        )
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
+
 # Standard CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # --- DATA MODELS ---
+
 
 class ManualModeRequest(BaseModel):
     enabled: bool
@@ -81,6 +104,7 @@ class ServoControlRequest(BaseModel):
 
 # --- VIDEO STREAM ---
 
+
 async def generate_mjpeg():
     """
     Async generator for the MJPEG video stream.
@@ -94,10 +118,7 @@ async def generate_mjpeg():
                 await asyncio.sleep(0.05)
                 continue
 
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + jpg_data + b"\r\n"
-            )
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg_data + b"\r\n")
 
             await asyncio.sleep(0.033)
 
@@ -106,6 +127,7 @@ async def generate_mjpeg():
 
 
 # --- ENDPOINTS ---
+
 
 @app.get("/health")
 async def health_check():
@@ -118,8 +140,7 @@ async def health_check():
 async def video_feed():
     """Stream video feed to the client."""
     return StreamingResponse(
-        generate_mjpeg(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
+        generate_mjpeg(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
 
@@ -161,9 +182,5 @@ async def control_servo(request: ServoControlRequest):
 
 if __name__ == "__main__":
     uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        loop="asyncio",
-        timeout_graceful_shutdown=2
+        app, host="0.0.0.0", port=8000, loop="asyncio", timeout_graceful_shutdown=2
     )

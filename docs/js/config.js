@@ -49,3 +49,11 @@ export function setHost(isLocal) {
 export function getUrl(endpoint) {
     return `${state.currentHost}${endpoint}`;
 }
+
+// Helper: fetch options for Private Network Access (only in Local mode)
+export function fetchOptions() {
+    if (state.currentHost === CONFIG.hosts.LOCAL) {
+        return { targetAddressSpace: 'private' };
+    }
+    return {};
+}

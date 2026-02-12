@@ -1,5 +1,5 @@
 // js/script.js
-import { CONFIG, state, setHost, getUrl } from './config.js';
+import { CONFIG, state, setHost, getUrl, fetchOptions } from './config.js';
 import { sendMoveManaged, sendServoManaged, sendMode } from './network.js';
 
 // --- DOM Elements ---
@@ -170,7 +170,7 @@ state.isOnline = false;
 
 async function checkSystem() {
     try {
-        const res = await fetch(getUrl(CONFIG.endpoints.health));
+        const res = await fetch(getUrl(CONFIG.endpoints.health), fetchOptions());
         if (res.ok) {
             if (!state.isOnline) goOnline();
             

@@ -1,5 +1,5 @@
 // js/network.js
-import { getUrl } from './config.js';
+import { getUrl, fetchOptions } from './config.js';
 
 let isMovePending = false;
 let nextMoveCmd = null;
@@ -17,6 +17,7 @@ export async function sendMoveManaged(left, right) {
     isMovePending = true;
     try {
         await fetch(getUrl('/control/move'), {
+            ...fetchOptions(),
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ left, right })
@@ -42,6 +43,7 @@ export async function sendServoManaged(pan, tilt) {
     isServoPending = true;
     try {
         await fetch(getUrl('/control/servo'), {
+            ...fetchOptions(),
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pan, tilt })
@@ -62,6 +64,7 @@ export async function sendServoManaged(pan, tilt) {
 export async function sendMode(enabled) {
     try {
         await fetch(getUrl('/control/mode'), {
+            ...fetchOptions(),
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled })
