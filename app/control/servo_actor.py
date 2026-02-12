@@ -5,11 +5,13 @@ from app.hardware.servo_pico import PicoController
 
 logger = logging.getLogger("ServoActor")
 
+
 class PanTiltHead:
     """
-    Final corrected actor. Signs flipped to fix "running away" 
+    Final corrected actor. Signs flipped to fix "running away"
     and Kd reduced to stop the "initial jump" away from the face.
     """
+
     def __init__(self, pico_controller: PicoController):
         self.pico = pico_controller
         self.pan_angle = 90.0
@@ -17,14 +19,13 @@ class PanTiltHead:
         self.PAN_MIN, self.PAN_MAX = 0, 180
         self.TILT_MIN, self.TILT_MAX = 50, 130
 
-        # --- DIRECTION & SOFT START FIX ---
-        # Pan: Set to negative to pull the face back to center
-        # Tilt: Set to positive to follow vertical movement
-        # Kd: Lowered to 0.002 to prevent the aggressive initial jump
-        self.pid_pan = PIDController(kp=-0.0020, ki=0.0, kd=-0.002, output_limit=0.4)
-        self.pid_tilt = PIDController(kp=0.0010, ki=0.0, kd=0.001, output_limit=0.3)
+        # --- PID TUNING (narrow FoV camera) ---
+        # Narrower lens → face covers more pixels → error is ~2x larger.
+        # Gains reduced ~40% from wide-angle values to compensate.
+        self.pid_pan = PIDController(kp=-0.0012, ki=0.0, kd=-0.001, output_limit=0.4)
+        self.pid_tilt = PIDController(kp=0.0006, ki=0.0, kd=0.0005, output_limit=0.3)
 
-        self.dead_zone = 20
+        self.dead_zone = 35  # Larger face → need wider dead zone to filter noise
         self.last_sent_time = 0.0
         self.send_interval = 0.04
         self.last_sent_pan = -1
@@ -40,14 +41,20 @@ class PanTiltHead:
         delta_tilt = self.pid_tilt.compute(adj_err_y)
 
         # Apply movement
-        self.pan_angle = self._clamp(self.pan_angle + delta_pan, self.PAN_MIN, self.PAN_MAX)
-        self.tilt_angle = self._clamp(self.tilt_angle + delta_tilt, self.TILT_MIN, self.TILT_MAX)
+        self.pan_angle = self._clamp(
+            self.pan_angle + delta_pan, self.PAN_MIN, self.PAN_MAX
+        )
+        self.tilt_angle = self._clamp(
+            self.tilt_angle + delta_tilt, self.TILT_MIN, self.TILT_MAX
+        )
 
         self._sync_hardware()
 
         return {
-            "d_pan": delta_pan, "d_tilt": delta_tilt,
-            "pan": self.pan_angle, "tilt": self.tilt_angle
+            "d_pan": delta_pan,
+            "d_tilt": delta_tilt,
+            "pan": self.pan_angle,
+            "tilt": self.tilt_angle,
         }
 
     def manual_move(self, pan: int, tilt: int):
