@@ -3,100 +3,82 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Robot Vision Control</title>
+    <title>Robot Console</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
 
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>"
-    />
-
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <main class="monitor">
-      <article>
-        <header>
-          <nav>
-            <ul>
-              <li>
-                <div style="display: flex; gap: 15px; align-items: center">
-                  <label>
-                    <input type="checkbox" id="manual-mode-toggle" />
+    
+    <main class="console-layout">
+      
+      <section class="side-panel left">
+        <h4 class="panel-title">Platform</h4>
+        
+        <div class="d-pad">
+          <div></div>
+          <button data-action="forward" title="Forward">W</button>
+          <div></div>
+          
+          <button data-action="left" title="Left">A</button>
+          <button data-action="backward" title="Backward">S</button>
+          <button data-action="right" title="Right">D</button>
+        </div>
+        
+        <small class="key-hint">WASD</small>
+      </section>
+
+      <section class="center-screen">
+        
+        <header class="hud-header">
+            <div class="toggles">
+                <label>
+                    <input type="checkbox" id="manual-mode-toggle" /> 
                     Manual Mode
-                  </label>
+                </label>
 
-                  <label>
-                    <input type="checkbox" id="local-mode-toggle" />
+                <label>
+                    <input type="checkbox" id="local-mode-toggle" /> 
                     Local Network
-                  </label>
-                </div>
-              </li>
-
-              <li>
-                <small id="status-text">Connecting...</small>
+                </label>
+            </div>
+            
+            <div class="status">
                 <span id="status-dot" class="status-dot off"></span>
-              </li>
-            </ul>
-          </nav>
+                <small id="status-text">DISCONNECTED</small>
+            </div>
         </header>
 
-        <div class="stream-box" id="video-container">
-          <div class="offline-msg" id="placeholder">
-            Connecting to Neural Core...
-          </div>
-        </div>
-
-        <div id="manual-controls" style="display: none; padding: 10px">
-          <div class="grid">
-            <div>
-              <h4>Platform <small>(WASD)</small></h4>
-              <div class="control-grid">
-                <div></div>
-                <button data-action="forward" title="Forward (W)">▲</button>
-                <div></div>
-                <button data-action="left" title="Left (A)">◀</button>
-                <button data-action="backward" title="Backward (S)">▼</button>
-                <button data-action="right" title="Right (D)">▶</button>
-              </div>
+        <div class="viewport" id="video-container">
+            <div class="offline-placeholder" id="placeholder">
+                NO SIGNAL
             </div>
-
-            <div>
-              <h4>Camera <small>(Arrows)</small></h4>
-              <div class="control-grid">
-                <div></div>
-                <button data-action="camUp" title="Up">▲</button>
-                <div></div>
-                <button data-action="camLeft" title="Left">◀</button>
-                <button data-action="camDown" title="Down">▼</button>
-                <button data-action="camRight" title="Right">▶</button>
-              </div>
-              <br />
-              <button class="outline" id="btn-center-cam">Cam to Center</button>
-            </div>
-          </div>
-          <p class="hint-text">
-            ⌨️ Use <b>WASD</b> to move robot, <b>Arrow Keys</b> to look around.
-          </p>
         </div>
+      </section>
 
-        <footer>
-          <div class="grid">
-            <button class="secondary outline" id="btn-ping">Ping System</button>
-            <a
-              href="#"
-              id="link-docs"
-              target="_blank"
-              role="button"
-              class="contrast outline"
-              >API Docs</a
-            >
-          </div>
-        </footer>
-      </article>
+      <section class="side-panel right">
+        <h4 class="panel-title">Camera</h4>
+        
+        <div class="d-pad">
+          <div></div>
+          <button data-action="camUp" title="Up">▲</button>
+          <div></div>
+          
+          <button data-action="camLeft" title="Left">◀</button>
+          <button data-action="camDown" title="Down">▼</button>
+          <button data-action="camRight" title="Right">▶</button>
+        </div>
+        
+        <button id="btn-center-cam" class="btn-center" title="Reset Camera Position">
+            ⟲ Center
+        </button>
+        
+        <small class="key-hint">Arrows</small>
+      </section>
+
     </main>
 
     <script type="module" src="js/script.js"></script>

@@ -1,88 +1,243 @@
-/* Layout Centering */
+/* --- Global Settings --- */
 body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;        /* No scrollbars */
     display: flex;
+    align-items: center;     /* Vertical center */
+    justify-content: center; /* Horizontal center */
+    background-color: #11191f; /* Dark background */
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* --- Main Layout --- */
+.console-layout {
+    display: flex;
+    flex-direction: row;     /* Horizontal layout */
+    align-items: center;
+    justify-content: center; /* Keeps screen centered when panels hide */
+    width: 100%;
+    max-width: 1400px;
+    height: 100%;
+    padding: 20px;
+    gap: 20px;               /* Space between panels */
+    box-sizing: border-box;
+}
+
+/* --- Side Panels (Controllers) --- */
+.side-panel {
+    flex: 0 0 160px;         /* Fixed width */
+    display: flex;           /* Flex (hidden via JS when manual mode off) */
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    min-height: 100vh;
-    padding: 10px;
+    justify-content: center;
+    padding: 20px 10px;
+    background: #1c252c;     /* Lighter gray */
+    border-radius: 16px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    height: auto;
+    min-height: 300px;       /* Handle height */
+}
+
+.panel-title {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8899a6;
+    margin-top: 0;
+}
+
+.key-hint {
+    margin-top: 10px;
+    font-size: 0.7rem;
+    opacity: 0.5;
+    color: #fff;
+}
+
+/* --- D-PAD Buttons --- */
+.d-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.d-pad button {
+    width: 45px;
+    height: 45px;
+    padding: 0;
     margin: 0;
-    overflow-y: auto;
-}
-
-.monitor {
-    text-align: center;
-    max-width: 800px;
-    width: 100%;
-}
-
-/* Video Stream Container */
-.stream-box {
-    background: #000;
+    font-size: 1.2rem;
+    font-weight: bold;
     border-radius: 8px;
-    overflow: hidden;
-    aspect-ratio: 4/3;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 10px;
-    border: 2px solid #333;
-    max-height: 50vh;
-    margin-left: auto;
-    margin-right: auto;
+    background-color: #2d3b45;
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 0 #161e24; /* 3D effect */
+    transition: transform 0.1s, box-shadow 0.1s;
+    cursor: pointer;
 }
 
-.stream-box img {
+.d-pad button:active,
+.d-pad button.active {       /* .active added via JS for keyboard */
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #161e24;
+    background-color: #00e676 !important; /* Green highlight */
+    color: #000;
+}
+
+.btn-center {
+    margin-top: 20px;
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid #555;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.btn-center:hover {
+    border-color: #fff;
+    color: #fff;
+}
+
+/* --- Center Screen Area --- */
+.center-screen {
+    flex-grow: 1;            /* Takes available space */
     height: 100%;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    max-width: 1000px;
+    min-width: 0;            /* Important for flex shrinking */
 }
 
-/* Status Messages & Indicators */
-.offline-msg {
-  color: #d81b60;
-  font-weight: bold;
-  font-size: 1.2rem;
+/* Header & HUD */
+.hud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 5px;
+    width: 100%;
+}
+
+/* Toggles (Clean, no tooltips) */
+.toggles {
+    display: flex;
+    align-items: center;
+}
+
+.toggles label {
+    font-size: 0.9rem;
+    margin-right: 20px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggles input {
+    margin: 0;
+}
+
+/* Status Indicators */
+.status {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-family: monospace;
+    color: #888;
 }
 
 .status-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-  transition: background-color 0.3s, box-shadow 0.3s;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background-color: #ff1744; /* Default OFF */
+}
+.status-dot.on { background-color: #00e676; box-shadow: 0 0 8px #00e676; }
+.status-dot.off { background-color: #ff1744; }
+
+/* Video Viewport */
+.viewport {
+    flex-grow: 1;
+    background: #000;
+    border-radius: 8px;
+    border: 2px solid #333;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-.status-dot.on {
-  background-color: #2ecc71;
-  box-shadow: 0 0 8px #2ecc71;
+.viewport img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Ensures video fits without cropping */
 }
 
-.status-dot.off {
-  background-color: #e74c3c;
-}
-
-/* Manual Control UI */
-.control-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  max-width: 200px;
-  margin: 0 auto;
-}
-
-.control-grid button {
-  padding: 15px;
-  font-size: 1.5em;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.hint-text {
+.offline-placeholder {
+    color: #ff1744;
+    font-family: monospace;
+    letter-spacing: 2px;
+    animation: blink 1.5s infinite;
     text-align: center;
-    margin-top: 10px;
-    font-size: 0.8rem;
-    opacity: 0.7;
+}
+
+@keyframes blink { 50% { opacity: 0.5; } }
+
+
+/* --- Mobile / Tablet Response --- */
+@media (max-width: 900px) {
+    .console-layout {
+        flex-direction: column;
+        overflow-y: auto; /* Allow scroll on mobile */
+        padding-top: 20px;
+        justify-content: flex-start;
+    }
+    
+    .center-screen {
+        width: 100%;
+        order: 1; /* Screen on top */
+        height: auto;
+        aspect-ratio: 4/3;
+        flex-grow: 0;
+    }
+    
+    .side-panel {
+        flex: none;
+        width: 100%;
+        flex-direction: row; /* Buttons in row below screen */
+        justify-content: space-around;
+        min-height: auto;
+        padding: 15px;
+        order: 2; /* Panels below */
+        margin-bottom: 10px;
+    }
+
+    .d-pad {
+        gap: 15px; /* Larger gap for touch */
+    }
+    
+    .d-pad button {
+        width: 55px; /* Larger buttons for fingers */
+        height: 55px;
+    }
+    
+    .panel-title, .key-hint, .btn-center {
+        display: none; /* Hide extra text on mobile to save space */
+    }
 }

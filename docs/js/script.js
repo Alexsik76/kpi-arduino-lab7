@@ -1,4 +1,3 @@
-// js/script.js
 import { CONFIG, state, setHost, getUrl, fetchOptions } from './config.js';
 import { sendMoveManaged, sendServoManaged, sendMode } from './network.js';
 
@@ -6,11 +5,13 @@ import { sendMoveManaged, sendServoManaged, sendMode } from './network.js';
 const els = {
     manualCheck: document.getElementById('manual-mode-toggle'),
     localCheck: document.getElementById('local-mode-toggle'),
-    controls: document.getElementById('manual-controls'),
+    // Select both side panels
+    sidePanels: document.querySelectorAll('.side-panel'),
     dot: document.getElementById('status-dot'),
     text: document.getElementById('status-text'),
     container: document.getElementById('video-container'),
-    docsLink: document.getElementById('link-docs')
+    // Docs link removed from new HTML, but keeping safe check
+    docsLink: document.getElementById('link-docs') 
 };
 
 // --- Initialization ---
@@ -18,13 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Restore Local Mode Toggle
     const isLocal = state.currentHost === CONFIG.hosts.LOCAL;
     els.localCheck.checked = isLocal;
-    updateDocsLink();
+    
+    // 2. Initialize UI State
+    updatePanelState();
+    if (els.docsLink) updateDocsLink();
 
-    // 2. Start Loop
+    // 3. Start Loop
     checkSystem();
     setInterval(checkSystem, CONFIG.interval);
     
-    // 3. Start Control Loop (20Hz)
+    // 4. Start Control Loop (20Hz)
     setInterval(controlLoop, 50);
 });
 
@@ -33,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 1. Local Mode Toggle
 els.localCheck.addEventListener('change', (e) => {
     setHost(e.target.checked);
-    updateDocsLink();
+    if (els.docsLink) updateDocsLink();
     checkSystem(); // Re-ping immediately
     if (state.isOnline) goOnline(); // Refresh video feed
 });
@@ -41,7 +45,7 @@ els.localCheck.addEventListener('change', (e) => {
 // 2. Manual Mode Toggle
 els.manualCheck.addEventListener('change', (e) => {
     state.manualMode = e.target.checked;
-    els.controls.style.display = state.manualMode ? 'block' : 'none';
+    updatePanelState();
     sendMode(state.manualMode);
 });
 
@@ -49,23 +53,37 @@ els.manualCheck.addEventListener('change', (e) => {
 document.querySelectorAll('button[data-action]').forEach(btn => {
     const action = btn.dataset.action;
     
-    const start = (e) => { e.preventDefault(); setInput(action, true); };
-    const end = (e) => { e.preventDefault(); setInput(action, false); };
+    const start = (e) => { 
+        if (!state.manualMode) return;
+        e.preventDefault(); 
+        setInput(action, true); 
+        btn.classList.add('active'); // Visual feedback
+    };
+    
+    const end = (e) => { 
+        if (!state.manualMode) return;
+        e.preventDefault(); 
+        setInput(action, false); 
+        btn.classList.remove('active');
+    };
 
     btn.addEventListener('mousedown', start);
     btn.addEventListener('mouseup', end);
     btn.addEventListener('touchstart', start);
     btn.addEventListener('touchend', end);
-    btn.addEventListener('mouseleave', end); // Safety
+    btn.addEventListener('mouseleave', end);
 });
 
 // 4. Center Camera
-document.getElementById('btn-center-cam').addEventListener('click', () => {
-    if (!state.manualMode) return;
-    state.pan = 90;
-    state.tilt = 90;
-    sendServoManaged(90, 90);
-});
+const btnCenter = document.getElementById('btn-center-cam');
+if (btnCenter) {
+    btnCenter.addEventListener('click', () => {
+        if (!state.manualMode) return;
+        state.pan = 90;
+        state.tilt = 90;
+        sendServoManaged(90, 90);
+    });
+}
 
 // 5. Keyboard Inputs
 document.addEventListener('keydown', (e) => {
@@ -80,8 +98,16 @@ document.addEventListener('keyup', (e) => {
 
 // --- Logic Helpers ---
 
+function updatePanelState() {
+    // Toggle visibility of both side panels
+    const displayValue = state.manualMode ? 'flex' : 'none';
+    els.sidePanels.forEach(panel => {
+        panel.style.display = displayValue;
+    });
+}
+
 function updateDocsLink() {
-    els.docsLink.href = getUrl(CONFIG.endpoints.docs);
+    if (els.docsLink) els.docsLink.href = getUrl(CONFIG.endpoints.docs);
 }
 
 function setInput(action, active) {
@@ -90,15 +116,21 @@ function setInput(action, active) {
 }
 
 function mapKeys(key, active) {
+    // Highlight UI buttons on keypress
+    const highlightBtn = (act) => {
+        const btn = document.querySelector(`button[data-action="${act}"]`);
+        if (btn) active ? btn.classList.add('active') : btn.classList.remove('active');
+    };
+
     switch(key) {
-        case 'w': case 'W': setInput('forward', active); break;
-        case 's': case 'S': setInput('backward', active); break;
-        case 'a': case 'A': setInput('left', active); break;
-        case 'd': case 'D': setInput('right', active); break;
-        case 'ArrowUp': setInput('camUp', active); break;
-        case 'ArrowDown': setInput('camDown', active); break;
-        case 'ArrowLeft': setInput('camLeft', active); break;
-        case 'ArrowRight': setInput('camRight', active); break;
+        case 'w': case 'W': setInput('forward', active); highlightBtn('forward'); break;
+        case 's': case 'S': setInput('backward', active); highlightBtn('backward'); break;
+        case 'a': case 'A': setInput('left', active); highlightBtn('left'); break;
+        case 'd': case 'D': setInput('right', active); highlightBtn('right'); break;
+        case 'ArrowUp': setInput('camUp', active); highlightBtn('camUp'); break;
+        case 'ArrowDown': setInput('camDown', active); highlightBtn('camDown'); break;
+        case 'ArrowLeft': setInput('camLeft', active); highlightBtn('camLeft'); break;
+        case 'ArrowRight': setInput('camRight', active); highlightBtn('camRight'); break;
     }
 }
 
@@ -109,11 +141,7 @@ let lastSentTime = 0;
 
 function controlLoop() {
     if (!state.manualMode) return;
-    
-    // 1. Process Platform
     processPlatform();
-    
-    // 2. Process Camera
     processCamera();
 }
 
@@ -140,7 +168,7 @@ function processPlatform() {
     const isMoving = (curL !== 0 || curR !== 0);
     const changed = (curL !== lastLeft || curR !== lastRight);
     
-    // Heartbeat logic
+    // Heartbeat logic to prevent runaway robot if connection drops
     const heartbeat = isMoving && (now - lastSentTime > 200);
 
     if (changed || heartbeat) {
@@ -153,7 +181,7 @@ function processPlatform() {
 
 function processCamera() {
     let changed = false;
-    const step = 1;
+    const step = 2; // Increased speed slightly for better feel
 
     if (state.input.camUp && state.tilt > 50) { state.tilt -= step; changed = true; }
     if (state.input.camDown && state.tilt < 130) { state.tilt += step; changed = true; }
@@ -183,11 +211,11 @@ async function checkSystem() {
                     if (serverMode !== state.manualMode) {
                         state.manualMode = serverMode;
                         els.manualCheck.checked = serverMode;
-                        els.controls.style.display = serverMode ? 'block' : 'none';
+                        updatePanelState();
                     }
                 }
             } catch (e) {
-                // Non-critical — mode sync failure shouldn't affect status
+                // Ignore mode sync errors
             }
         } else {
             if (state.isOnline) goOffline();
@@ -201,9 +229,9 @@ function goOnline() {
     state.isOnline = true;
     els.dot.className = 'status-dot on';
     els.text.innerText = state.currentHost.includes('.lan') ? 'ONLINE (LOCAL)' : 'ONLINE (GLOBAL)';
-    els.text.style.color = '#2ecc71';
+    els.text.style.color = '#00e676';
     
-    // Add timestamp to bust cache
+    // Cache busting
     els.container.innerHTML = `<img src="${getUrl(CONFIG.endpoints.feed)}?t=${Date.now()}" alt="Live Feed" crossorigin="anonymous">`;
 }
 
@@ -211,6 +239,6 @@ function goOffline() {
     state.isOnline = false;
     els.dot.className = 'status-dot off';
     els.text.innerText = 'OFFLINE';
-    els.text.style.color = '#e74c3c';
-    els.container.innerHTML = `<div class="offline-msg">⚠️ SIGNAL LOST<br><small>${state.currentHost}</small></div>`;
+    els.text.style.color = '#ff1744';
+    els.container.innerHTML = `<div class="offline-placeholder">⚠️ SIGNAL LOST<br><small>${state.currentHost}</small></div>`;
 }
