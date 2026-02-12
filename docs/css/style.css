@@ -115,6 +115,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
+    align-items: center;
     max-width: 1000px;
     min-width: 0;            /* Important for flex shrinking */
 }
@@ -171,7 +172,10 @@ body {
 
 /* Video Viewport */
 .viewport {
-    flex-grow: 1;
+    flex-grow: 0;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 4/3;
     background: #000;
     border-radius: 8px;
     border: 2px solid #333;
@@ -186,7 +190,7 @@ body {
 .viewport img {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* Ensures video fits without cropping */
+    object-fit: cover; /* Ensures video fits without cropping */
 }
 
 .offline-placeholder {
@@ -214,6 +218,13 @@ body {
         order: 1; /* Screen on top */
         height: auto;
         aspect-ratio: 4/3;
+        flex-grow: 0;
+    }
+
+    .viewport {
+        width: 100%;    
+        height: auto;   
+        aspect-ratio: 4/3; 
         flex-grow: 0;
     }
     
