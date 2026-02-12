@@ -192,7 +192,7 @@ function goOnline() {
     els.text.style.color = '#2ecc71';
     
     // Add timestamp to bust cache
-    els.container.innerHTML = `<img src="${getUrl(CONFIG.endpoints.feed)}?t=${Date.now()}" alt="Live Feed">`;
+    els.container.innerHTML = `<img src="${getUrl(CONFIG.endpoints.feed)}?t=${Date.now()}" alt="Live Feed" crossorigin="anonymous">`;
 }
 
 function goOffline() {
