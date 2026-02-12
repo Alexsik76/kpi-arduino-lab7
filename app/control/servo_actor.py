@@ -21,7 +21,7 @@ class PanTiltHead:
         # Pan: Set to negative to pull the face back to center
         # Tilt: Set to positive to follow vertical movement
         # Kd: Lowered to 0.002 to prevent the aggressive initial jump
-        self.pid_pan = PIDController(kp=-0.0020, ki=0.0, kd=0.002, output_limit=0.4)
+        self.pid_pan = PIDController(kp=-0.0020, ki=0.0, kd=-0.002, output_limit=0.4)
         self.pid_tilt = PIDController(kp=0.0010, ki=0.0, kd=0.001, output_limit=0.3)
 
         self.dead_zone = 20
