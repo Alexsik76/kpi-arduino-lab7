@@ -5,7 +5,7 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -15,7 +15,8 @@ from core import TrackingSystem
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, 
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("API")
 
@@ -27,7 +28,7 @@ system: Optional[TrackingSystem] = None
 async def lifespan(app: FastAPI):
     """
     Manages the lifecycle of the application.
-    Initializes the hardware on startup and cleans up on shutdown.
+    Initializes hardware on startup and cleans up on shutdown.
     """
     global system
 
@@ -51,15 +52,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="Robot Eye v2")
 
-# --- CORS CONFIGURATION ---
+# --- CORS & PRIVATE NETWORK ACCESS CONFIGURATION ---
+
+# Standard CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # --- DATA MODELS ---
 
@@ -89,17 +91,14 @@ async def generate_mjpeg():
             jpg_data = system.get_jpg()
 
             if jpg_data is None:
-                # Wait briefly if the camera is not ready yet
                 await asyncio.sleep(0.05)
                 continue
 
-            # Construct the multipart frame
             yield (
                 b"--frame\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n" + jpg_data + b"\r\n"
             )
 
-            # Cap at ~30 FPS
             await asyncio.sleep(0.033)
 
     except (asyncio.CancelledError, OSError, ConnectionResetError):
@@ -110,7 +109,7 @@ async def generate_mjpeg():
 
 @app.get("/health")
 async def health_check():
-    """Returns the system status."""
+    """Returns the current system status."""
     status = "online" if system and system.running else "offline"
     return {"status": status}
 
@@ -142,9 +141,9 @@ async def get_manual_mode():
 
 @app.post("/control/move")
 async def control_move(request: MotorControlRequest):
-    """Control the wheel motors (Manual mode only)."""
+    """Control wheel motors (Manual mode only)."""
     if not system or not system.manual_mode:
-        return {"status": "error", "message": "Manual mode not enabled or system offline"}
+        return {"status": "error", "message": "Manual mode disabled"}
 
     system.set_motor_speed(request.left, request.right)
     return {"status": "ok", "left": request.left, "right": request.right}
@@ -152,16 +151,15 @@ async def control_move(request: MotorControlRequest):
 
 @app.post("/control/servo")
 async def control_servo(request: ServoControlRequest):
-    """Control the pan/tilt servos (Manual mode only)."""
+    """Control pan/tilt servos (Manual mode only)."""
     if not system or not system.manual_mode:
-        return {"status": "error", "message": "Manual mode not enabled or system offline"}
+        return {"status": "error", "message": "Manual mode disabled"}
 
     system.set_servo_angle(request.pan, request.tilt)
     return {"status": "ok", "pan": request.pan, "tilt": request.tilt}
 
 
 if __name__ == "__main__":
-    # Host 0.0.0.0 allows access from other devices on the network
     uvicorn.run(
         app,
         host="0.0.0.0",

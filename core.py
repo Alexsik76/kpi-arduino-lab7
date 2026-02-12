@@ -69,7 +69,7 @@ class TrackingSystem:
     def set_motor_speed(self, left: int, right: int):
         """Restored for platform movement."""
         if self.manual_mode:
-            self.target_l, self.target_r = left, right
+            self.target_l, self.target_r =  right, left
 
     def start(self):
         if self.running: return
