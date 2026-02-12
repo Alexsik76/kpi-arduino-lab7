@@ -120,10 +120,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 5px;
     padding: 0 10px;
     width: 100%;
-    max-width: 800px;        /* Limits header width to video size */
+    max-width: 1000px;        /* Limits header width to video size */
+    flex-shrink: 0;
 }
 
 .toggles {
@@ -167,7 +168,7 @@ body {
     width: auto;
     height: auto;
     max-width: 100%;         /* Prevents horizontal overlap */
-    max-height: 70vh;        /* Prevents vertical overflow */
+    max-height: 85vh;        /* Prevents vertical overflow */
     aspect-ratio: 4 / 3;     /* Native camera ratio */
     
     background: #000;
@@ -179,6 +180,8 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    flex-grow: 0;
+    flex-shrink: 1;
 }
 
 .viewport img {
