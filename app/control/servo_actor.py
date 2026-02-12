@@ -20,10 +20,11 @@ class PanTiltHead:
         self.TILT_MIN, self.TILT_MAX = 50, 130
 
         # --- PID TUNING (narrow FoV camera) ---
-        # Narrower lens → face covers more pixels → error is ~2x larger.
-        # Gains reduced ~40% from wide-angle values to compensate.
-        self.pid_pan = PIDController(kp=-0.0012, ki=0.0, kd=-0.001, output_limit=0.4)
-        self.pid_tilt = PIDController(kp=0.0006, ki=0.0, kd=0.0005, output_limit=0.3)
+        # Strategy: moderate kp for proportional smoothness near center,
+        # higher output_limit so servo can move fast when error is large.
+        # Small error (36px): ~0.2°/frame (smooth). Large error (200px): 1.2° (fast).
+        self.pid_pan = PIDController(kp=-0.006, ki=0.0, kd=-0.002, output_limit=1.2)
+        self.pid_tilt = PIDController(kp=0.004, ki=0.0, kd=0.001, output_limit=0.8)
 
         self.dead_zone = 35  # Larger face → need wider dead zone to filter noise
         self.last_sent_time = 0.0
