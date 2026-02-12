@@ -4,57 +4,50 @@ body {
     padding: 0;
     height: 100vh;
     width: 100vw;
-    overflow: hidden;        /* No scrollbars */
+    overflow: hidden;        /* Prevents page scrolling when using Arrow keys */
     display: flex;
     align-items: center;     /* Vertical center */
     justify-content: center; /* Horizontal center */
-    background-color: #11191f; /* Dark background */
+    background-color: #11191f;
     font-family: system-ui, -apple-system, sans-serif;
 }
 
-/* --- Main Layout --- */
+/* --- Main Console Layout --- */
 .console-layout {
     display: flex;
-    flex-direction: row;     /* Horizontal layout */
+    flex-direction: row;     /* Side-by-side layout */
     align-items: center;
-    justify-content: center; /* Keeps screen centered when panels hide */
+    justify-content: center; /* Keeps everything centered */
     width: 100%;
     max-width: 1400px;
     height: 100%;
     padding: 20px;
-    gap: 20px;               /* Space between panels */
+    gap: 20px;               /* Space between panels and screen */
     box-sizing: border-box;
 }
 
 /* --- Side Panels (Controllers) --- */
 .side-panel {
-    flex: 0 0 160px;         /* Fixed width */
-    display: flex;           /* Flex (hidden via JS when manual mode off) */
+    flex: 0 0 160px;         /* Fixed width, won't shrink */
+    display: flex;           /* Controlled by JS (none/flex) */
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 20px 10px;
-    background: #1c252c;     /* Lighter gray */
+    background: #1c252c;
     border-radius: 16px;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    height: auto;
-    min-height: 300px;       /* Handle height */
+    min-height: 300px;
+    z-index: 10;
 }
 
 .panel-title {
     margin-bottom: 15px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: #8899a6;
     margin-top: 0;
-}
-
-.key-hint {
-    margin-top: 10px;
-    font-size: 0.7rem;
-    opacity: 0.5;
-    color: #fff;
 }
 
 /* --- D-PAD Buttons --- */
@@ -65,11 +58,11 @@ body {
 }
 
 .d-pad button {
-    width: 45px;
-    height: 45px;
+    width: 46px;
+    height: 46px;
     padding: 0;
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: bold;
     border-radius: 8px;
     display: flex;
@@ -83,11 +76,12 @@ body {
     cursor: pointer;
 }
 
+/* State for physical keyboard feedback or active touch */
 .d-pad button:active,
-.d-pad button.active {       /* .active added via JS for keyboard */
+.d-pad button.active {
     transform: translateY(4px);
     box-shadow: 0 0 0 #161e24;
-    background-color: #00e676 !important; /* Green highlight */
+    background-color: #00e676 !important; /* Robot green */
     color: #000;
 }
 
@@ -95,69 +89,64 @@ body {
     margin-top: 20px;
     width: 100%;
     font-size: 0.8rem;
-    padding: 8px;
+    padding: 10px;
     background: transparent;
-    border: 1px solid #555;
-    color: #ccc;
+    border: 1px solid #444;
+    color: #aaa;
     cursor: pointer;
     border-radius: 6px;
+    transition: all 0.2s;
 }
+
 .btn-center:hover {
     border-color: #fff;
     color: #fff;
 }
 
-/* --- Center Screen Area --- */
+/* --- Center Section (HUD & Viewport) --- */
 .center-screen {
-    flex-grow: 1;            /* Takes available space */
+    flex-grow: 1;            /* Takes all available middle space */
+    flex-shrink: 1;          /* Allowed to shrink to protect side panels */
+    min-width: 0;            /* Necessary for flex-children to shrink correctly */
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: stretch;
-    align-items: center;
-    max-width: 1000px;
-    min-width: 0;            /* Important for flex shrinking */
+    align-items: center;     /* Centers the 4:3 video */
 }
 
-/* Header & HUD */
+/* HUD Header */
 .hud-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding: 0 5px;
+    margin-bottom: 12px;
+    padding: 0 10px;
     width: 100%;
+    max-width: 800px;        /* Limits header width to video size */
 }
 
-/* Toggles (Clean, no tooltips) */
 .toggles {
     display: flex;
-    align-items: center;
+    gap: 15px;
 }
 
 .toggles label {
-    font-size: 0.9rem;
-    margin-right: 20px;
+    font-size: 0.85rem;
     color: #ccc;
     cursor: pointer;
-    padding: 5px 0;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.toggles input {
     margin: 0;
 }
 
-/* Status Indicators */
 .status {
     display: flex;
     align-items: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-family: monospace;
-    color: #888;
+    color: #666;
 }
 
 .status-dot {
@@ -165,32 +154,37 @@ body {
     height: 8px;
     border-radius: 50%;
     margin-right: 8px;
-    background-color: #ff1744; /* Default OFF */
+    background-color: #ff1744;
 }
-.status-dot.on { background-color: #00e676; box-shadow: 0 0 8px #00e676; }
-.status-dot.off { background-color: #ff1744; }
 
-/* Video Viewport */
+.status-dot.on {
+    background-color: #00e676;
+    box-shadow: 0 0 8px #00e676;
+}
+
+/* --- Viewport (The Video Box) --- */
 .viewport {
-    flex-grow: 0;
     width: auto;
-    height: 100%;
-    aspect-ratio: 4/3;
+    height: auto;
+    max-width: 100%;         /* Prevents horizontal overlap */
+    max-height: 70vh;        /* Prevents vertical overflow */
+    aspect-ratio: 4 / 3;     /* Native camera ratio */
+    
     background: #000;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 2px solid #333;
     position: relative;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
 
 .viewport img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Ensures video fits without cropping */
+    object-fit: cover;       /* Tight fit, no internal bars */
 }
 
 .offline-placeholder {
@@ -199,56 +193,61 @@ body {
     letter-spacing: 2px;
     animation: blink 1.5s infinite;
     text-align: center;
+    font-weight: bold;
 }
 
-@keyframes blink { 50% { opacity: 0.5; } }
+@keyframes blink { 50% { opacity: 0.3; } }
 
+/* Key Hints */
+.key-hint {
+    margin-top: 12px;
+    font-size: 0.65rem;
+    opacity: 0.4;
+    color: #fff;
+    text-transform: uppercase;
+}
 
-/* --- Mobile / Tablet Response --- */
+/* --- Mobile / Tablet Adaptability --- */
 @media (max-width: 900px) {
     .console-layout {
         flex-direction: column;
-        overflow-y: auto; /* Allow scroll on mobile */
-        padding-top: 20px;
+        overflow-y: auto;    /* Allow vertical scroll on small devices */
         justify-content: flex-start;
+        padding: 10px;
     }
     
     .center-screen {
         width: 100%;
-        order: 1; /* Screen on top */
+        order: 1;            /* Screen always on top */
         height: auto;
-        aspect-ratio: 4/3;
         flex-grow: 0;
     }
 
-    .viewport {
-        width: 100%;    
-        height: auto;   
-        aspect-ratio: 4/3; 
-        flex-grow: 0;
+    .hud-header {
+        max-width: 100%;
     }
     
     .side-panel {
         flex: none;
         width: 100%;
-        flex-direction: row; /* Buttons in row below screen */
+        flex-direction: row;
         justify-content: space-around;
         min-height: auto;
         padding: 15px;
-        order: 2; /* Panels below */
-        margin-bottom: 10px;
+        order: 2;            /* Controls below video */
+        margin-top: 10px;
     }
 
     .d-pad {
-        gap: 15px; /* Larger gap for touch */
+        gap: 15px;
     }
     
     .d-pad button {
-        width: 55px; /* Larger buttons for fingers */
-        height: 55px;
+        width: 50px;
+        height: 50px;
     }
     
     .panel-title, .key-hint, .btn-center {
-        display: none; /* Hide extra text on mobile to save space */
+        display: none;       /* Hide clutter on mobile */
     }
 }
