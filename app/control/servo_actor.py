@@ -24,7 +24,7 @@ class PanTiltHead:
         # higher output_limit so servo can move fast when error is large.
         # Small error (36px): ~0.2°/frame (smooth). Large error (200px): 1.2° (fast).
         self.pid_pan = PIDController(kp=-0.006, ki=0.0, kd=-0.002, output_limit=1.2)
-        self.pid_tilt = PIDController(kp=0.0025, ki=0.0, kd=0.0005, output_limit=0.5)
+        self.pid_tilt = PIDController(kp=0.0010, ki=0.0, kd=0.001, output_limit=0.3)
 
         self.dead_zone = 35  # Larger face → need wider dead zone to filter noise
         self.last_sent_time = 0.0
