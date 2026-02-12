@@ -174,9 +174,21 @@ async function checkSystem() {
         if (res.ok) {
             if (!state.isOnline) goOnline();
             
-            // Sync mode state from server (optional)
-            // const modeRes = await fetch(getUrl(CONFIG.endpoints.mode));
-            // if (modeRes.ok) { ... }
+            // Sync mode state from server
+            try {
+                const modeRes = await fetch(getUrl(CONFIG.endpoints.mode), fetchOptions());
+                if (modeRes.ok) {
+                    const data = await modeRes.json();
+                    const serverMode = data.manual_mode;
+                    if (serverMode !== state.manualMode) {
+                        state.manualMode = serverMode;
+                        els.manualCheck.checked = serverMode;
+                        els.controls.style.display = serverMode ? 'block' : 'none';
+                    }
+                }
+            } catch (e) {
+                // Non-critical — mode sync failure shouldn't affect status
+            }
         } else {
             if (state.isOnline) goOffline();
         }

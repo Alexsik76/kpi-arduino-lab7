@@ -4,8 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Robot Vision Control</title>
-    
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>"
+    />
 
     <link
       rel="stylesheet"
@@ -20,19 +23,19 @@
           <nav>
             <ul>
               <li>
-                <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="display: flex; gap: 15px; align-items: center">
                   <label>
                     <input type="checkbox" id="manual-mode-toggle" />
                     Manual Mode
                   </label>
-                  
-                  <label style="color: #4db6ac;">
+
+                  <label>
                     <input type="checkbox" id="local-mode-toggle" />
                     Local Network
                   </label>
                 </div>
               </li>
-              
+
               <li>
                 <small id="status-text">Connecting...</small>
                 <span id="status-dot" class="status-dot off"></span>
@@ -72,9 +75,7 @@
                 <button data-action="camRight" title="Right">▶</button>
               </div>
               <br />
-              <button class="outline" id="btn-center-cam">
-                Cam to Center 
-              </button>
+              <button class="outline" id="btn-center-cam">Cam to Center</button>
             </div>
           </div>
           <p class="hint-text">
@@ -84,9 +85,7 @@
 
         <footer>
           <div class="grid">
-            <button class="secondary outline" id="btn-ping">
-              Ping System
-            </button>
+            <button class="secondary outline" id="btn-ping">Ping System</button>
             <a
               href="#"
               id="link-docs"
