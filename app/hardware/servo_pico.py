@@ -42,6 +42,7 @@ class PicoController:
             # Prepare payload: JSON + \n
             payload = json.dumps(command) + "\n"
             self.serial.write(payload.encode("utf-8"))
+            self.serial.flush()
         except Exception as e:
             logger.error(f"UART Write Error: {e}")
             # Optional: logic to attempt reconnection could go here
