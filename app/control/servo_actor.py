@@ -7,84 +7,69 @@ logger = logging.getLogger("ServoActor")
 
 class PanTiltHead:
     """
-    High-level controller for the Pan/Tilt mechanism.
-    Manages PID logic, physical angle limits, and UART communication rates.
+    Final corrected actor. Signs flipped to fix "running away" 
+    and Kd reduced to stop the "initial jump" away from the face.
     """
-
     def __init__(self, pico_controller: PicoController):
         self.pico = pico_controller
-        
-        # Current State
-        self.pan_angle: float = 90.0
-        self.tilt_angle: float = 90.0
-        
-        # Hardware Limits (Hard Stops)
+        self.pan_angle = 90.0
+        self.tilt_angle = 90.0
         self.PAN_MIN, self.PAN_MAX = 0, 180
         self.TILT_MIN, self.TILT_MAX = 50, 130
-        
-        # PID Configuration (Output limit = max speed per tick)
-        self.pid_pan = PIDController(kp=0.035, ki=0.0, kd=0.02, output_limit=15)
-        self.pid_tilt = PIDController(kp=0.035, ki=0.0, kd=0.02, output_limit=10)
-        
-        # Configuration
-        self.invert_pan = True
-        self.invert_tilt = False
-        
-        # Rate Limiting (to avoid flooding UART)
+
+        # --- DIRECTION & SOFT START FIX ---
+        # Pan: Set to negative to pull the face back to center
+        # Tilt: Set to positive to follow vertical movement
+        # Kd: Lowered to 0.002 to prevent the aggressive initial jump
+        self.pid_pan = PIDController(kp=-0.0020, ki=0.0, kd=0.002, output_limit=0.4)
+        self.pid_tilt = PIDController(kp=0.0010, ki=0.0, kd=0.001, output_limit=0.3)
+
+        self.dead_zone = 20
         self.last_sent_time = 0.0
-        self.send_interval = 0.03  # ~30Hz max update rate
+        self.send_interval = 0.04
         self.last_sent_pan = -1
         self.last_sent_tilt = -1
 
     def track_target(self, error_x: int, error_y: int) -> dict:
-        """
-        Calculates new angles based on error and moves servos if needed.
-        Returns debug stats.
-        """
-        # 1. PID Calculation (Getting the correction)
-        delta_pan = self.pid_pan.compute(0, error_x)
-        delta_tilt = self.pid_tilt.compute(0, error_y)
+        """Calculates smooth tracking without the initial opposite kick."""
+        adj_err_x = error_x if abs(error_x) > self.dead_zone else 0
+        adj_err_y = error_y if abs(error_y) > self.dead_zone else 0
 
-        if self.invert_pan: delta_pan *= -1
-        if self.invert_tilt: delta_tilt *= -1
+        # Compute PID outputs
+        delta_pan = self.pid_pan.compute(adj_err_x)
+        delta_tilt = self.pid_tilt.compute(adj_err_y)
 
-        # 2. Apply Correction & Clamp (Physical Limits)
+        # Apply movement
         self.pan_angle = self._clamp(self.pan_angle + delta_pan, self.PAN_MIN, self.PAN_MAX)
         self.tilt_angle = self._clamp(self.tilt_angle + delta_tilt, self.TILT_MIN, self.TILT_MAX)
 
-        # 3. Send to Hardware (Rate Limited)
         self._sync_hardware()
 
         return {
-            "d_pan": delta_pan,
-            "d_tilt": delta_tilt,
-            "pan": self.pan_angle,
-            "tilt": self.tilt_angle
+            "d_pan": delta_pan, "d_tilt": delta_tilt,
+            "pan": self.pan_angle, "tilt": self.tilt_angle
         }
 
     def manual_move(self, pan: int, tilt: int):
-        """Directly sets angles in manual mode."""
+        """Standard manual control used by the UI buttons."""
         self.pan_angle = self._clamp(pan, self.PAN_MIN, self.PAN_MAX)
         self.tilt_angle = self._clamp(tilt, self.TILT_MIN, self.TILT_MAX)
+        self.pid_pan.reset()
+        self.pid_tilt.reset()
         self._sync_hardware(force=True)
 
-    def _sync_hardware(self, force=False):
-        """Sends command to Pico via UART if interval passed or forced."""
+    def _sync_hardware(self, force: bool = False):
+        """Sends commands to Pico via UART."""
         now = time.time()
-        
-        # Check time constraint
         if not force and (now - self.last_sent_time < self.send_interval):
             return
 
-        # Check redundant data constraint (don't send if angle hasn't changed enough)
-        pan_changed = abs(self.pan_angle - self.last_sent_pan) > 0.5
-        tilt_changed = abs(self.tilt_angle - self.last_sent_tilt) > 0.5
-
-        if force or pan_changed or tilt_changed:
-            self.pico.send_cmd(int(self.pan_angle), int(self.tilt_angle))
-            self.last_sent_time = now
-            self.last_sent_pan = self.pan_angle
-            self.last_sent_tilt = self.tilt_angle
+        if force or abs(self.pan_angle - self.last_sent_pan) > 0.4:
+            if self.pico:
+                self.pico.send_cmd(int(self.pan_angle), int(self.tilt_angle))
+                self.last_sent_time = now
+                self.last_sent_pan = self.pan_angle
+                self.last_sent_tilt = self.tilt_angle
 
     @staticmethod
     def _clamp(value, min_val, max_val):
