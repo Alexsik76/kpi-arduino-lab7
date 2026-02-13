@@ -10,14 +10,16 @@ from app.utils.data_logger import DataLogger
 
 logger = logging.getLogger("Core")
 
+
 # --- MOCK CLASS ---
 class MockPicoController(PicoController):
     """
     Inherits from PicoController to satisfy type checkers.
     Overrides __init__ to avoid opening real serial ports.
     """
+
     def __init__(self, port=None):
-        # We deliberately do NOT call super().__init__() 
+        # We deliberately do NOT call super().__init__()
         # to prevent hardware connection attempts.
         pass
 
@@ -27,6 +29,7 @@ class MockPicoController(PicoController):
 
     def close(self):
         pass
+
 
 class TrackingSystem:
     def __init__(self, enable_logging: bool = False):
@@ -42,13 +45,13 @@ class TrackingSystem:
 
         # Subsystems
         self.pico = self._init_pico()
-        
+
         self.cap = self._init_camera()
         self.detector = FaceDetector(score_threshold=0.7)
-        
+
         # Now valid because MockPicoController IS A PicoController
         self.head = PanTiltHead(self.pico)
-        
+
         self.logger = DataLogger() if enable_logging else None
 
         # Motor targets
@@ -71,12 +74,12 @@ class TrackingSystem:
         )
         # Try GStreamer (for RPi Camera)
         cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
-        
+
         # Fallback to standard V4L2 if GStreamer fails
         if not cap.isOpened():
             logger.warning("GStreamer failed, falling back to V4L2 (index 0)")
             cap = cv2.VideoCapture(0)
-            
+
         return cap
 
     # --- API METHODS ---
@@ -100,16 +103,16 @@ class TrackingSystem:
             self.target_l, self.target_r = right, left
 
     def start(self):
-        if self.running: 
+        if self.running:
             return
         self.running = True
         threading.Thread(target=self._loop, daemon=True).start()
 
     def stop(self):
         self.running = False
-        if self.cap: 
+        if self.cap:
             self.cap.release()
-        if self.pico: 
+        if self.pico:
             self.pico.close()
 
     # --- INTERNAL LOOP ---
@@ -130,9 +133,12 @@ class TrackingSystem:
 
             if self.logger and log_stats:
                 self.logger.log(
-                    log_stats.get("err_x", 0), log_stats.get("err_y", 0),
-                    self.head.pan_angle, self.head.tilt_angle,
-                    log_stats.get("d_pan", 0), log_stats.get("d_tilt", 0)
+                    log_stats.get("err_x", 0),
+                    log_stats.get("err_y", 0),
+                    self.head.pan_angle,
+                    self.head.tilt_angle,
+                    log_stats.get("d_pan", 0),
+                    log_stats.get("d_tilt", 0),
                 )
 
             self._update_stream(frame)
@@ -140,22 +146,22 @@ class TrackingSystem:
 
     def _process_auto_tracking(self, frame):
         face_box, landmarks = self.detector.find_face(frame)
-        
+
         if face_box is not None and landmarks is not None:
             nose_x, nose_y = landmarks[4], landmarks[5]
             error_x = nose_x - self.center_x
             error_y = nose_y - self.center_y
-            
+
             move_stats = self.head.track_target(error_x, error_y)
-            
+
             x, y, w, h = face_box
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.circle(frame, (nose_x, nose_y), 5, (0, 0, 255), -1)
-            
+
             stats = {"err_x": error_x, "err_y": error_y}
             stats.update(move_stats)
             return stats
-        
+
         return None
 
     def _update_motors(self, last_l, last_r):
