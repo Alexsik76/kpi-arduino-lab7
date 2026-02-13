@@ -1,256 +1,127 @@
-/* --- Global Settings --- */
+/* --- 1. GLOBAL LAYOUT (Sticky Footer) --- */
 body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;        /* Prevents page scrolling when using Arrow keys */
-    display: flex;
-    align-items: center;     /* Vertical center */
-    justify-content: center; /* Horizontal center */
-    background-color: #11191f;
-    font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* --- Main Console Layout --- */
-.console-layout {
-    display: flex;
-    flex-direction: row;     /* Side-by-side layout */
-    align-items: center;
-    justify-content: center; /* Keeps everything centered */
-    width: 100%;
-    max-width: 1400px;
-    height: 100%;
-    padding: 20px;
-    gap: 20px;               /* Space between panels and screen */
-    box-sizing: border-box;
-}
-
-/* --- Side Panels (Controllers) --- */
-.side-panel {
-    flex: 0 0 160px;         /* Fixed width, won't shrink */
-    display: flex;           /* Controlled by JS (none/flex) */
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px 10px;
-    background: #1c252c;
-    border-radius: 16px;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    min-height: 300px;
-    z-index: 10;
-}
-
-.panel-title {
-    margin-bottom: 15px;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #8899a6;
-    margin-top: 0;
-}
-
-/* --- D-PAD Buttons --- */
-.d-pad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-
-.d-pad button {
-    width: 46px;
-    height: 46px;
-    padding: 0;
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: bold;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #2d3b45;
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 0 #161e24; /* 3D effect */
-    transition: transform 0.1s, box-shadow 0.1s;
-    cursor: pointer;
-}
-
-/* State for physical keyboard feedback or active touch */
-.d-pad button:active,
-.d-pad button.active {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 #161e24;
-    background-color: #00e676 !important; /* Robot green */
-    color: #000;
-}
-
-.btn-center {
-    margin-top: 20px;
-    width: 100%;
-    font-size: 0.8rem;
-    padding: 10px;
-    background: transparent;
-    border: 1px solid #444;
-    color: #aaa;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.btn-center:hover {
-    border-color: #fff;
-    color: #fff;
-}
-
-/* --- Center Section (HUD & Viewport) --- */
-.center-screen {
-    flex-grow: 1;            /* Takes all available middle space */
-    flex-shrink: 1;          /* Allowed to shrink to protect side panels */
-    min-width: 0;            /* Necessary for flex-children to shrink correctly */
-    height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;     /* Centers the 4:3 video */
+    min-height: 100vh;
+    overflow: hidden;
 }
 
-/* HUD Header */
-.hud-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-    padding: 0 10px;
-    width: 100%;
-    max-width: 1000px;        /* Limits header width to video size */
+header, footer {
     flex-shrink: 0;
 }
 
-.toggles {
+main {
+    flex-grow: 1;
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* --- 2. CONSOLE GRID (Layout) --- */
+.console-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Центруємо весь блок */
+    gap: 15px;               /* Фіксована мінімальна відстань між панелями та відео */
+    width: 100%;
+    height: 100%;
+}
+
+/* --- 3. SIDE PANELS --- */
+.panel {
+    width: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 15px;
+    flex-shrink: 0; /* Панелі не стискаються */
 }
 
-.toggles label {
-    font-size: 0.85rem;
-    color: #ccc;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
+.d-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
 }
 
-.status {
-    display: flex;
-    align-items: center;
-    font-size: 0.75rem;
-    font-family: monospace;
-    color: #666;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-    background-color: #ff1744;
-}
-
-.status-dot.on {
-    background-color: #00e676;
-    box-shadow: 0 0 8px #00e676;
-}
-
-/* --- Viewport (The Video Box) --- */
-.viewport {
-    width: auto;
-    height: auto;
-    max-width: 100%;         /* Prevents horizontal overlap */
-    max-height: 85vh;        /* Prevents vertical overflow */
-    aspect-ratio: 4 / 3;     /* Native camera ratio */
-    
-    background: #000;
-    border-radius: 12px;
-    border: 2px solid #333;
-    position: relative;
-    overflow: hidden;
+.d-pad button {
+    width: 45px;
+    height: 45px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-    flex-grow: 0;
-    flex-shrink: 1;
+    margin-bottom: 0;
+    font-size: 1.2rem; /* Трохи збільшив шрифт для нових стрілок */
+}
+
+.d-pad button.active {
+    background-color: var(--pico-primary-background);
+    color: var(--pico-primary-inverse);
+    border-color: var(--pico-primary-border);
+}
+
+.btn-reset {
+    width: 100%;
+    padding: 5px;
+    font-size: 0.8rem;
+}
+
+/* --- 4. CENTER VIDEO --- */
+.viewport-wrapper {
+    /* flex-grow: 1;  <-- ПРИБРАНО. Тепер обгортка не розтягується */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* max-width: 100%; <-- ПРИБРАНО. Зайве, ширину контролює .viewport */
+}
+
+.viewport {
+    width: 800px;
+    max-width: 100%;
+    aspect-ratio: 4 / 3;
+    
+    max-height: 75vh;
+    min-height: 300px;
+    
+    background: #000;
+    border: 2px solid var(--pico-muted-border-color);
+    border-radius: var(--pico-border-radius);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
 }
 
 .viewport img {
     width: 100%;
     height: 100%;
-    object-fit: cover;       /* Tight fit, no internal bars */
+    object-fit: cover;
 }
 
-.offline-placeholder {
-    color: #ff1744;
-    font-family: monospace;
-    letter-spacing: 2px;
-    animation: blink 1.5s infinite;
-    text-align: center;
+#placeholder {
+    color: var(--pico-del-color);
     font-weight: bold;
 }
 
-@keyframes blink { 50% { opacity: 0.3; } }
-
-/* Key Hints */
-.key-hint {
-    margin-top: 12px;
-    font-size: 0.65rem;
-    opacity: 0.4;
-    color: #fff;
-    text-transform: uppercase;
+/* --- 5. UTILS --- */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
 }
+.status-dot.off { background-color: var(--pico-del-color); }
+.status-dot.on { background-color: var(--pico-ins-color); }
 
-/* --- Mobile / Tablet Adaptability --- */
+/* --- 6. MOBILE ADAPT --- */
 @media (max-width: 900px) {
-    .console-layout {
-        flex-direction: column;
-        overflow-y: auto;    /* Allow vertical scroll on small devices */
-        justify-content: flex-start;
-        padding: 10px;
-    }
-    
-    .center-screen {
-        width: 100%;
-        order: 1;            /* Screen always on top */
-        height: auto;
-        flex-grow: 0;
-    }
-
-    .hud-header {
-        max-width: 100%;
-    }
-    
-    .side-panel {
-        flex: none;
-        width: 100%;
-        flex-direction: row;
-        justify-content: space-around;
-        min-height: auto;
-        padding: 15px;
-        order: 2;            /* Controls below video */
-        margin-top: 10px;
-    }
-
-    .d-pad {
-        gap: 15px;
-    }
-    
-    .d-pad button {
-        width: 50px;
-        height: 50px;
-    }
-    
-    .panel-title, .key-hint, .btn-center {
-        display: none;       /* Hide clutter on mobile */
-    }
+    body { overflow-y: auto; }
+    .console-grid { flex-direction: column; padding: 20px 0; gap: 20px; }
+    .panel { flex-direction: row; width: 100%; justify-content: center; }
+    .viewport { width: 100%; }
 }

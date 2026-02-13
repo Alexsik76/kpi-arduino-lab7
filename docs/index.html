@@ -4,82 +4,82 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Robot Console</title>
-    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
-    
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    
-    <main class="console-layout">
-      
-      <section class="side-panel left">
-        <h4 class="panel-title">Platform</h4>
-        
-        <div class="d-pad">
-          <div></div>
-          <button data-action="forward" title="Forward">W</button>
-          <div></div>
-          
-          <button data-action="left" title="Left">A</button>
-          <button data-action="backward" title="Backward">S</button>
-          <button data-action="right" title="Right">D</button>
-        </div>
-        
-        <small class="key-hint">WASD</small>
-      </section>
 
-      <section class="center-screen">
-        
-        <header class="hud-header">
-            <div class="toggles">
-                <label>
-                    <input type="checkbox" id="manual-mode-toggle" /> 
-                    Manual Mode
-                </label>
-
-                <label>
-                    <input type="checkbox" id="local-mode-toggle" /> 
-                    Local Network
-                </label>
-            </div>
-            
-            <div class="status">
+    <header class="container-fluid">
+      <nav>
+        <ul>
+          <li><strong>🤖 Robot Console</strong></li>
+        </ul>
+        <ul>
+          <li>
+            <label>
+              <input type="checkbox" id="manual-mode-toggle" role="switch" />
+              Manual
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="local-mode-toggle" role="switch" />
+              Local
+            </label>
+          </li>
+          <li>
+             <small data-tooltip="Connection Status">
                 <span id="status-dot" class="status-dot off"></span>
-                <small id="status-text">DISCONNECTED</small>
+                <span id="status-text">OFFLINE</span>
+             </small>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="container-fluid">
+      <div class="console-grid">
+        
+        <aside class="panel left">
+            <div class="d-pad">
+                <div></div>
+                <button data-action="forward" class="outline">W</button>
+                <div></div>
+                
+                <button data-action="left" class="outline">A</button>
+                <button data-action="backward" class="outline">S</button>
+                <button data-action="right" class="outline">D</button>
             </div>
-        </header>
+            <small>Platform</small>
+        </aside>
 
-        <div class="viewport" id="video-container">
-            <div class="offline-placeholder" id="placeholder">
-                NO SIGNAL
+        <section class="viewport-wrapper">
+            <div class="viewport" id="video-container">
+                <div id="placeholder">⚠️ SIGNAL LOST</div>
             </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="side-panel right">
-        <h4 class="panel-title">Camera</h4>
-        
-        <div class="d-pad">
-          <div></div>
-          <button data-action="camUp" title="Up">▲</button>
-          <div></div>
-          
-          <button data-action="camLeft" title="Left">◀</button>
-          <button data-action="camDown" title="Down">▼</button>
-          <button data-action="camRight" title="Right">▶</button>
-        </div>
-        
-        <button id="btn-center-cam" class="btn-center" title="Reset Camera Position">
-            ⟲ Center
-        </button>
-        
-        <small class="key-hint">Arrows</small>
-      </section>
+        <aside class="panel right">
+            <div class="d-pad">
+                <div></div>
+                <button data-action="camUp" class="outline">⬆</button>
+                <div></div>
+                
+                <button data-action="camLeft" class="outline">⬅</button>
+                <button data-action="camDown" class="outline">⬇</button>
+                <button data-action="camRight" class="outline">➡</button>
+            </div>
+            <button id="btn-center-cam" class="outline contrast btn-reset">⟲ Center</button>
+            <small>Camera</small>
+        </aside>
 
+      </div>
     </main>
+
+    <footer class="container-fluid">
+      <small>Arduino Lab-7</small>
+    </footer>
 
     <script type="module" src="js/script.js"></script>
   </body>

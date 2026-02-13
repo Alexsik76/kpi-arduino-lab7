@@ -6,7 +6,7 @@ const els = {
     manualCheck: document.getElementById('manual-mode-toggle'),
     localCheck: document.getElementById('local-mode-toggle'),
     // Select both side panels
-    sidePanels: document.querySelectorAll('.side-panel'),
+    sidePanels: document.querySelectorAll('.panel'),
     dot: document.getElementById('status-dot'),
     text: document.getElementById('status-text'),
     container: document.getElementById('video-container'),
@@ -228,10 +228,7 @@ async function checkSystem() {
 function goOnline() {
     state.isOnline = true;
     els.dot.className = 'status-dot on';
-    els.text.innerText = state.currentHost.includes('.lan') ? 'ONLINE (LOCAL)' : 'ONLINE (GLOBAL)';
-    els.text.style.color = '#00e676';
-    
-    // Cache busting
+    els.text.innerText = 'ONLINE';
     els.container.innerHTML = `<img src="${getUrl(CONFIG.endpoints.feed)}?t=${Date.now()}" alt="Live Feed" crossorigin="anonymous">`;
 }
 
@@ -240,5 +237,5 @@ function goOffline() {
     els.dot.className = 'status-dot off';
     els.text.innerText = 'OFFLINE';
     els.text.style.color = '#ff1744';
-    els.container.innerHTML = `<div class="offline-placeholder">⚠️ SIGNAL LOST<br><small>${state.currentHost}</small></div>`;
+    els.container.innerHTML = `<div class="offline-placeholder">⚠️ SIGNAL LOST</div>`;
 }
