@@ -5,21 +5,22 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, Request
-from fastapi.responses import Response, StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import uvicorn
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from core import TrackingSystem
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("API")
 
-# Global system instance (initialized lazily)
+# Global system instance
 system: Optional[TrackingSystem] = None
 
 
@@ -51,7 +52,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="Robot Eye v2")
 
-# --- CORS & PRIVATE NETWORK ACCESS CONFIGURATION ---
+# --- DATA MODELS ---
+
+
+class ManualModeRequest(BaseModel):
+    enabled: bool
+
+
+class MotorControlRequest(BaseModel):
+    left: int
+    right: int
+
+
+class ServoControlRequest(BaseModel):
+    pan: int
+    tilt: int
+
+
+# --- MIDDLEWARE ---
 
 
 @app.middleware("http")
@@ -76,7 +94,6 @@ async def private_network_access_middleware(request: Request, call_next):
     return response
 
 
-# Standard CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,45 +102,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- DATA MODELS ---
 
-
-class ManualModeRequest(BaseModel):
-    enabled: bool
-
-
-class MotorControlRequest(BaseModel):
-    left: int
-    right: int
-
-
-class ServoControlRequest(BaseModel):
-    pan: int
-    tilt: int
-
-
-# --- VIDEO STREAM ---
+# --- VIDEO STREAM GENERATOR ---
 
 
 async def generate_mjpeg():
     """
     Async generator for the MJPEG video stream.
     Yields JPEG frames with multipart boundaries.
+    Handles client disconnection gracefully to avoid console errors.
     """
     try:
         while system and system.running:
             jpg_data = system.get_jpg()
 
-            if jpg_data is None:
+            if jpg_data:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + jpg_data + b"\r\n"
+                )
+                # Sleep ~33ms for approx 30 FPS and to yield control
+                await asyncio.sleep(0.033)
+            else:
+                # No frame yet, wait a bit longer to avoid CPU spinning
                 await asyncio.sleep(0.05)
-                continue
-
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg_data + b"\r\n")
-
-            await asyncio.sleep(0.033)
 
     except (asyncio.CancelledError, OSError, ConnectionResetError):
-        logger.debug("Client disconnected from stream")
+        # Graceful exit when client disconnects or server shuts down
+        pass
+    except Exception as e:
+        logger.error(f"Stream generation error: {e}")
 
 
 # --- ENDPOINTS ---
@@ -140,7 +148,8 @@ async def health_check():
 async def video_feed():
     """Stream video feed to the client."""
     return StreamingResponse(
-        generate_mjpeg(), media_type="multipart/x-mixed-replace; boundary=frame"
+        generate_mjpeg(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
 
@@ -182,5 +191,9 @@ async def control_servo(request: ServoControlRequest):
 
 if __name__ == "__main__":
     uvicorn.run(
-        app, host="0.0.0.0", port=8000, loop="asyncio", timeout_graceful_shutdown=2
+        app,
+        host="0.0.0.0",
+        port=8000,
+        loop="asyncio",
+        timeout_graceful_shutdown=2
     )
