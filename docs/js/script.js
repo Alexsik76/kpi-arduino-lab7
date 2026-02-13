@@ -229,6 +229,7 @@ function goOnline() {
     state.isOnline = true;
     els.dot.className = 'status-dot on';
     els.text.innerText = 'ONLINE';
+    els.text.style.color = 'var(--pico-ins-color)'
     els.container.innerHTML = `<img src="${getUrl(CONFIG.endpoints.feed)}?t=${Date.now()}" alt="Live Feed" crossorigin="anonymous">`;
 }
 
@@ -236,6 +237,6 @@ function goOffline() {
     state.isOnline = false;
     els.dot.className = 'status-dot off';
     els.text.innerText = 'OFFLINE';
-    els.text.style.color = '#ff1744';
+    els.text.style.color = 'var(--pico-del-color)';
     els.container.innerHTML = `<div class="offline-placeholder">⚠️ SIGNAL LOST</div>`;
 }
