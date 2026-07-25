@@ -60,3 +60,11 @@ These addresses are only accessible when the robot is **powered on** and connect
    ```bash
    python main.py
    ```
+
+## Demo
+
+![Driving the robot from the browser console with live face detection](docs/img/robot.gif)
+
+The browser console shows the camera stream from the robot.
+WASD keys drive the platform, the arrow pad moves the camera,
+and face detection runs on the device itself.
