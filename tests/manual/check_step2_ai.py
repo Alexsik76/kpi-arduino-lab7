@@ -1,6 +1,7 @@
+import os
+
 import cv2
 import numpy as np
-import os
 
 print("1. Checking OpenCV version...")
 print(f"   Version: {cv2.__version__}")

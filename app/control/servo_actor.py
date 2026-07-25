@@ -1,5 +1,6 @@
-import time
 import logging
+import time
+
 from app.control.pid import PIDController
 from app.hardware.servo_pico import PicoController
 

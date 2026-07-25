@@ -1,5 +1,6 @@
-import time
 import logging
+import time
+
 from gpiozero import OutputDevice
 from gpiozero.pins.lgpio import LGPIOFactory
 

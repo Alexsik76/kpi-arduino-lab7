@@ -1,6 +1,7 @@
-import serial
-import time
 import json
+import time
+
+import serial
 
 # Налаштування порту
 ser = serial.Serial('/dev/serial0', 115200, timeout=1)

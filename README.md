@@ -1,5 +1,7 @@
 # KPI Arduino Lab 7 - Robot Eye v2
 
+![CI](https://github.com/Alexsik76/kpi-arduino-lab7/actions/workflows/ci.yml/badge.svg)
+
 This project is a remote-controlled robot system with face tracking capabilities, built on Raspberry Pi (Backend) and Raspberry Pi Pico (Firmware).
 
 ## 🌍 Project Resources

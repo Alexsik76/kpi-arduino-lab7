@@ -1,5 +1,5 @@
+
 import cv2
-import time
 
 print("Init Camera...")
 cap = cv2.VideoCapture(0)

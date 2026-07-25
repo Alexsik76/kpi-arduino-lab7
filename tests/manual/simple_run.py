@@ -1,9 +1,9 @@
-import cv2
-import serial
-import time
 import json
 import os
-import numpy as np
+import time
+
+import cv2
+import serial
 
 # --- НАЛАШТУВАННЯ ---
 UART_PORT = '/dev/serial0'
@@ -76,7 +76,8 @@ print("[Init] Camera OK")
 print(">>> STARTING TRACKING LOOP (Ctrl+C to stop) <<<")
 try:
     # Пропускаємо перші кадри для стабілізації камери
-    for _ in range(5): cap.read()
+    for _ in range(5):
+        cap.read()
     
     # Таймер для обмеження частоти UART (щоб не заспамити)
     last_sent_time = 0
@@ -115,15 +116,20 @@ try:
             moved = False
             
             if abs(error_x) > 20:
-                # Інверсія для Pan: якщо обличчя зліва (x < center), треба крутити вліво (або вправо, залежить від мотора)
+                # Інверсія для Pan: якщо обличчя зліва (x < center), треба крутити вліво
+                # (або вправо, залежить від мотора)
                 # Спробуй змінити знак, якщо крутить не туди
-                if error_x > 0: pan_angle -= step 
-                else: pan_angle += step
+                if error_x > 0:
+                    pan_angle -= step 
+                else:
+                    pan_angle += step
                 moved = True
                 
             if abs(error_y) > 20:
-                if error_y > 0: tilt_angle += step
-                else: tilt_angle -= step
+                if error_y > 0:
+                    tilt_angle += step
+                else:
+                    tilt_angle -= step
                 moved = True
 
             # Обмеження
@@ -134,7 +140,10 @@ try:
             if moved and (time.time() - last_sent_time > 0.06):
                 send_servo(pan_angle, tilt_angle)
                 last_sent_time = time.time()
-                print(f"[Track] Face at ({nose_x},{nose_y}) -> Servo ({int(pan_angle)}, {int(tilt_angle)})")
+                print(
+                    f"[Track] Face at ({nose_x},{nose_y}) -> "
+                    f"Servo ({int(pan_angle)}, {int(tilt_angle)})"
+                )
         
         # Невелика пауза, щоб розвантажити CPU
         time.sleep(0.01)

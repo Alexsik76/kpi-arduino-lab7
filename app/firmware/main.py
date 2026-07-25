@@ -1,8 +1,9 @@
-from machine import UART, Pin, Timer
 import json
 import time
-from servo import Servo180
+
+from machine import UART, Pin, Timer
 from motor import TB6612Motor
+from servo import Servo180
 
 # --- 1. SETUP LED ---
 led = Pin("LED", Pin.OUT)
@@ -64,7 +65,10 @@ def startup_wiggle():
     
     # Visual confirmation with LED
     for _ in range(3):
-        led.on(); time.sleep(0.05); led.off(); time.sleep(0.05)
+        led.on()
+        time.sleep(0.05)
+        led.off()
+        time.sleep(0.05)
 
 # Run animation once on boot
 startup_wiggle()
@@ -85,14 +89,19 @@ while True:
                     data = json.loads(line_str)
                     
                     # Servo Control
-                    if "pan" in data: pan_servo.set_angle(data["pan"])
-                    if "tilt" in data: tilt_servo.set_angle(data["tilt"])
+                    if "pan" in data:
+                        pan_servo.set_angle(data["pan"])
+                    if "tilt" in data:
+                        tilt_servo.set_angle(data["tilt"])
                     
                     # Motor Control
-                    if "l" in data: motor_l.set_target(data["l"])
-                    if "r" in data: motor_r.set_target(data["r"])
+                    if "l" in data:
+                        motor_l.set_target(data["l"])
+                    if "r" in data:
+                        motor_r.set_target(data["r"])
                     
-                    if "stop" in data: stop_all()
+                    if "stop" in data:
+                        stop_all()
 
         except ValueError:
             pass 

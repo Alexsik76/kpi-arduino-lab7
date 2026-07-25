@@ -1,7 +1,8 @@
-import serial
 import json
 import logging
 from typing import Optional
+
+import serial
 
 logger = logging.getLogger(__name__)
 

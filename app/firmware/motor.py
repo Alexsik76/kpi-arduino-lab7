@@ -1,4 +1,5 @@
-from machine import Pin, PWM
+from machine import PWM, Pin
+
 
 class TB6612Motor:
     """
@@ -30,9 +31,10 @@ class TB6612Motor:
         self._apply_hardware(0)
 
     def set_target(self, value):
-        """Sets the target speed (-100 to 100)."""
-        if value > 100: value = 100
-        if value < -100: value = -100
+        if value > 100:
+            value = 100
+        if value < -100:
+            value = -100
         self.target_speed = float(value)
 
     def stop(self):

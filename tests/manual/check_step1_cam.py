@@ -1,5 +1,6 @@
-import cv2
 import time
+
+import cv2
 
 print("1. Init VideoCapture...")
 # На RPi 5 іноді краще явно вказати бекенд V4L2
@@ -21,7 +22,7 @@ ret, frame = cap.read()
 
 if ret:
     print(f"✅ Frame captured! Shape: {frame.shape}")
-    filename = "test_cam_output.jpg"
+    filename = "check_cam_output.jpg"
     cv2.imwrite(filename, frame)
     print(f"   Saved to {filename}")
 else:

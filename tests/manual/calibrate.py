@@ -1,5 +1,7 @@
 import time
+
 from app.hardware.servo_pico import PicoController
+
 
 def test_direction():
     print("--- КАЛІБРУВАННЯ НАПРЯМКУ ---")

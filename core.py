@@ -1,11 +1,12 @@
-import cv2
+import logging
 import threading
 import time
-import logging
 
+import cv2
+
+from app.control.servo_actor import PanTiltHead
 from app.hardware.servo_pico import PicoController
 from app.tracking.face_utils import FaceDetector
-from app.control.servo_actor import PanTiltHead
 from app.utils.data_logger import DataLogger
 
 logger = logging.getLogger("Core")

@@ -1,8 +1,8 @@
-import cv2
-
 # import numpy as np
 import logging
 import os
+
+import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,8 @@ class FaceDetector:
         max_area = 0
 
         for face in faces:
-            # face = [x, y, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rm, y_rm, x_lm, y_lm, confidence]
+            # face = [x, y, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt,
+            #         x_rm, y_rm, x_lm, y_lm, confidence]
             box = face[:4]
             w, h = box[2], box[3]
             area = w * h
